@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(timeout 25 node src/browser/launch.js)",
+      "Bash(tee /private/tmp/claude-501/-Users-mohammedhussain-Desktop-Claude-Projects-gethook-automation/3d9efbf6-614e-4cc8-8fb2-814f0db38d55/scratchpad/launch_test.log)",
+      "Bash(pkill -INT -f \"src/browser/launch.js\")",
+      "Bash(node \"/private/tmp/claude-501/-Users-mohammedhussain-Desktop-Claude-Projects-gethook-automation/3d9efbf6-614e-4cc8-8fb2-814f0db38d55/scratchpad/inspect.js\")",
+      "Bash(node _inspect_tmp.js)",
+      "Bash(node --check src/scraper/navigation.js)",
+      "Bash(node src/browser/launch.js)",
+      "Bash(node --check src/scraper/ads.js)"
+    ]
+  }
+}
