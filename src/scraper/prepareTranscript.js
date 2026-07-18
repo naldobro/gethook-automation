@@ -36,13 +36,62 @@ const { log, warn } = require('../browser/logger');
 const ACTION_TIMEOUT_MS = 15000;
 const GENERATE_BUTTON_PROBE_MS = 3000;
 const GENERATE_CLICK_ATTEMPTS = 3;
+const GENERATION_FLOW_ATTEMPTS = 3;
 const STABILITY_TIMEOUT_MS = 5000;
 const POLL_MS = 200;
 const STABLE_CHECKS_REQUIRED = 2;
+const GENERATE_BUTTON_NAME_PATTERN = /generate transcri/i;
 const TIMESTAMPS_TOGGLE_SELECTOR = 'label:has-text("Show timestamps") [role="switch"]';
+const TRANSCRIBE_API_PATTERN = /\/api\/ad-script\/transcribe(\?|$)/;
+
+/**
+ * Distinguishes a real backend failure (confirmed live via
+ * /api/ad-script/transcribe returning transcription_status: "failed" and
+ * an empty transcription array for a specific ad's media) from a scraper
+ * defect. Callers use this to route the ad to a "skipped" result instead
+ * of counting it as an error — there's nothing the scraper could have
+ * done differently.
+ */
+class BackendTranscriptionFailedError extends Error {
+  constructor(transcriptionStatus) {
+    super(`GetHook's backend reported transcription_status="${transcriptionStatus}" for this ad's media.`);
+    this.name = 'BackendTranscriptionFailedError';
+    this.transcriptionStatus = transcriptionStatus;
+  }
+}
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Watches the page for /api/ad-script/transcribe responses (both the
+ * POST that starts a job and the GET polls that check it) and remembers
+ * the most recently seen transcription_status. Must be stopped once the
+ * caller is done with it, since the underlying listener stays on `page`
+ * for the whole run otherwise.
+ */
+function watchTranscriptionStatus(page) {
+  let latestStatus = null;
+
+  const handler = async (response) => {
+    if (!TRANSCRIBE_API_PATTERN.test(response.url())) return;
+    try {
+      const body = await response.json();
+      if (body && typeof body.transcription_status === 'string') {
+        latestStatus = body.transcription_status;
+      }
+    } catch {
+      // Non-JSON or unreadable response; nothing to record.
+    }
+  };
+
+  page.on('response', handler);
+
+  return {
+    stop: () => page.off('response', handler),
+    getStatus: () => latestStatus,
+  };
 }
 
 /**
@@ -146,12 +195,34 @@ async function waitForTextToSettle(locator, timeoutMs = ACTION_TIMEOUT_MS) {
 
 /**
  * UI state (b): if a "Generate Transcription" button is present, click it
- * exactly once and wait for real transcript content to appear and settle
- * (no fixed sleep — a content-stability poll instead). If absent, state
- * (a) is assumed: a transcript already exists.
+ * and wait for real transcript content to appear and settle (no fixed
+ * sleep — a content-stability poll instead). If absent, state (a) is
+ * assumed: a transcript already exists.
+ *
+ * Generation can silently fail/revert for a given ad: the click lands,
+ * the button briefly hides, but the panel ends up back at its untouched
+ * state — and since that state's only text is the button's own label
+ * ("Generate Transcription"), a plain non-empty/stable check treats it
+ * as valid content (confirmed live: settled text was exactly that label,
+ * panel otherwise empty, no downstream controls ever rendered). So a
+ * settled result matching the button's own name is rejected as content,
+ * and the whole click-and-wait flow is retried a bounded number of times
+ * before giving up with an error that names what actually happened.
+ *
+ * Separately, GetHook's backend can genuinely fail to produce a
+ * transcript for a given ad's media (confirmed live via
+ * /api/ad-script/transcribe responding transcription_status: "failed",
+ * transcription: []) — that's not a scraper defect and retrying the
+ * click won't fix it. The frontend can also show a brief transient
+ * "settled" state before the backend's own poll loop reports the failure
+ * a few seconds later (confirmed live: content settled and passed this
+ * function's checks, then the toggle wait failed afterward once the
+ * backend's "failed" response actually arrived) — so `statusWatcher` is
+ * created by the caller and kept alive across the timestamps step too,
+ * not just this function, and is checked again there.
  */
-async function ensureTranscriptGenerated(dialog, transcriptPanel) {
-  const generateButton = dialog.getByRole('button', { name: /generate transcri/i }).first();
+async function ensureTranscriptGenerated(statusWatcher, dialog, transcriptPanel) {
+  const generateButton = dialog.getByRole('button', { name: GENERATE_BUTTON_NAME_PATTERN }).first();
   const present = await generateButton
     .waitFor({ state: 'visible', timeout: GENERATE_BUTTON_PROBE_MS })
     .then(() => true)
@@ -162,20 +233,47 @@ async function ensureTranscriptGenerated(dialog, transcriptPanel) {
     return { required: false, clicked: false, settledText: await waitForTextToSettle(transcriptPanel) };
   }
 
-  log('PREPARE', '"Generate Transcription" button found. Clicking once...');
-  await clickGenerateButtonWithRetry(generateButton);
+  let text = '';
 
-  await generateButton.waitFor({ state: 'hidden', timeout: ACTION_TIMEOUT_MS }).catch(() => {
-    warn('PREPARE', '"Generate Transcription" button did not disappear within the timeout; continuing.');
-  });
+  for (let attempt = 1; attempt <= GENERATION_FLOW_ATTEMPTS; attempt++) {
+    log(
+      'PREPARE',
+      `"Generate Transcription" button found. Clicking (generation attempt ${attempt}/${GENERATION_FLOW_ATTEMPTS})...`
+    );
+    await clickGenerateButtonWithRetry(generateButton);
 
-  const text = await waitForTextToSettle(transcriptPanel);
-  if (!text) {
-    throw new Error('Transcript generation did not produce any visible content.');
+    await generateButton.waitFor({ state: 'hidden', timeout: ACTION_TIMEOUT_MS }).catch(() => {
+      warn('PREPARE', '"Generate Transcription" button did not disappear within the timeout; continuing.');
+    });
+
+    text = await waitForTextToSettle(transcriptPanel);
+
+    const backendStatus = statusWatcher.getStatus();
+    if (backendStatus === 'failed') {
+      log(
+        'PREPARE',
+        `GetHook's backend reported transcription_status="failed" for this ad — not retrying further.`
+      );
+      throw new BackendTranscriptionFailedError(backendStatus);
+    }
+
+    if (text && !GENERATE_BUTTON_NAME_PATTERN.test(text)) {
+      log('PREPARE', 'Transcript generated and content has settled.');
+      return { required: true, clicked: true, settledText: text };
+    }
+
+    warn(
+      'PREPARE',
+      `Generation attempt ${attempt}/${GENERATION_FLOW_ATTEMPTS} did not produce real transcript content ` +
+        `(settled text was ${JSON.stringify(text)} — looks like the button's own label, not a transcript); ` +
+        (attempt < GENERATION_FLOW_ATTEMPTS ? 're-attempting.' : 'giving up.')
+    );
   }
 
-  log('PREPARE', 'Transcript generated and content has settled.');
-  return { required: true, clicked: true, settledText: text };
+  throw new Error(
+    `Transcript generation did not produce real content after ${GENERATION_FLOW_ATTEMPTS} attempts ` +
+      `(last settled text: ${JSON.stringify(text)}).`
+  );
 }
 
 /**
@@ -256,19 +354,47 @@ async function ensureTimestampsDisabled(dialog, transcriptPanel) {
  * `card` defaults to the first visible ad card (original single-ad
  * behavior); Phase 8's multi-ad loop passes a specific card locator so
  * every ad can be prepared in turn, not just the first.
+ *
+ * The transcription-status watcher is created here (not inside
+ * ensureTranscriptGenerated) and kept alive through the timestamps step
+ * too: the backend's own "failed" response can arrive a few seconds
+ * after content already looked settled, surfacing as a timestamps-toggle
+ * timeout rather than during generation itself. If that happens, the
+ * watcher's status — not ensureTimestampsDisabled's own logic, which is
+ * unchanged — is what reclassifies the failure as a backend issue rather
+ * than a scraper error.
  */
 async function prepareTranscript(page, card = page.getByTestId('ad-card').first()) {
   await openAdDetails(page, card);
   const dialog = page.getByRole('dialog');
   const transcriptPanel = await openTranscriptTab(page);
 
-  const generation = await ensureTranscriptGenerated(dialog, transcriptPanel);
-  const timestamps = await ensureTimestampsDisabled(dialog, transcriptPanel);
+  const statusWatcher = watchTranscriptionStatus(page);
+  try {
+    const generation = await ensureTranscriptGenerated(statusWatcher, dialog, transcriptPanel);
 
-  const ready = Boolean(generation.settledText) && timestamps.disabled;
-  log('PREPARE', `Transcript ready for extraction: ${ready}.`);
+    let timestamps;
+    try {
+      timestamps = await ensureTimestampsDisabled(dialog, transcriptPanel);
+    } catch (err) {
+      if (statusWatcher.getStatus() === 'failed') {
+        log(
+          'PREPARE',
+          `GetHook's backend reported transcription_status="failed" for this ad — the timestamps toggle ` +
+            'was never going to appear; not a scraper error.'
+        );
+        throw new BackendTranscriptionFailedError('failed');
+      }
+      throw err;
+    }
 
-  return { dialog, transcriptPanel, generation, timestamps, ready };
+    const ready = Boolean(generation.settledText) && timestamps.disabled;
+    log('PREPARE', `Transcript ready for extraction: ${ready}.`);
+
+    return { dialog, transcriptPanel, generation, timestamps, ready };
+  } finally {
+    statusWatcher.stop();
+  }
 }
 
-module.exports = { prepareTranscript };
+module.exports = { prepareTranscript, BackendTranscriptionFailedError };

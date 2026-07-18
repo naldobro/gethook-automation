@@ -164,6 +164,7 @@ async function main() {
   console.log(`Ads discovered: ${summary.totalDiscovered}`);
   console.log(`Ads processed: ${summary.totalProcessed}`);
   console.log(`Errors: ${summary.totalErrors}`);
+  console.log(`Skipped (backend transcription failed): ${summary.totalBackendFailures}`);
   console.log(`Success rate: ${successRate.toFixed(1)}%`);
   console.log(`JSON file path: ${exportedPath}`);
   console.log(`Collection duration: ${(collectionDurationMs / 1000).toFixed(1)}s`);

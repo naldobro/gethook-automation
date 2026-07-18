@@ -22,7 +22,7 @@
 
 const { log, warn, error } = require('../browser/logger');
 const { closeAdDetails } = require('./details');
-const { prepareTranscript } = require('./prepareTranscript');
+const { prepareTranscript, BackendTranscriptionFailedError } = require('./prepareTranscript');
 const { extractTranscript } = require('./extract');
 const { captureShareUrl } = require('./share');
 const { maxAds: MAX_ADS, filters: FILTER_CONFIG } = require('../config');
@@ -136,6 +136,7 @@ async function collectAdsForBrand(context, page, brandName, maxAds = MAX_ADS) {
 
   const seenIds = new Set();
   const results = [];
+  const skippedAds = [];
   let duplicatesIgnored = 0;
   let skipped = 0;
   let errors = 0;
@@ -173,8 +174,21 @@ async function collectAdsForBrand(context, page, brandName, maxAds = MAX_ADS) {
           `  -> success. transcriptLength=${result.transcript.length}, shareUrl=${result.shareUrl}`
         );
       } catch (err) {
-        errors += 1;
-        error('COLLECT', `Failed to process ad mediaId=${mediaId}: ${err.message}`);
+        if (err instanceof BackendTranscriptionFailedError) {
+          skippedAds.push({
+            mediaId,
+            reason: 'backend_transcription_failed',
+            transcriptionStatus: err.transcriptionStatus,
+          });
+          log(
+            'COLLECT',
+            `  -> skipped. GetHook's backend failed to transcribe mediaId=${mediaId} ` +
+              `(transcription_status="${err.transcriptionStatus}"); not a scraper error.`
+          );
+        } else {
+          errors += 1;
+          error('COLLECT', `Failed to process ad mediaId=${mediaId}: ${err.message}`);
+        }
         // Best-effort: make sure a half-open dialog doesn't break the next
         // ad's attempt, even though this ad's own close step may not
         // have run.
@@ -197,14 +211,16 @@ async function collectAdsForBrand(context, page, brandName, maxAds = MAX_ADS) {
     totalSkipped: skipped,
     totalDuplicatesIgnored: duplicatesIgnored,
     totalErrors: errors,
+    totalBackendFailures: skippedAds.length,
     ads: results,
+    skippedAds,
   };
 
   log(
     'COLLECT',
     `Summary: discovered=${summary.totalDiscovered}, processed=${summary.totalProcessed}, ` +
       `skipped=${summary.totalSkipped}, duplicatesIgnored=${summary.totalDuplicatesIgnored}, ` +
-      `errors=${summary.totalErrors}`
+      `errors=${summary.totalErrors}, backendFailures=${summary.totalBackendFailures}`
   );
 
   return summary;
