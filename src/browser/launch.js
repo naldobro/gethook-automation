@@ -33,6 +33,12 @@ const { ensureLoggedIn } = require('./session');
 const { askQuestion } = require('./prompt');
 const { navigateToBrand } = require('../scraper/navigation');
 const { detectAds } = require('../scraper/ads');
+const { collectAdsForBrand } = require('../scraper/collect');
+const { applyBrandFilters } = require('../scraper/filters');
+// Imported only for the startup report below — collect.js and filters.js
+// each read the values they actually need directly from ../config
+// themselves, rather than having them threaded through here.
+const { maxAds, filters: filterConfig } = require('../config');
 
 // Separates "--flag"-style switches from the positional brand name
 // argument, so they can appear in any order on the command line.
@@ -91,6 +97,12 @@ async function launchBrowser() {
 }
 
 async function main() {
+  console.log('Loaded configuration:');
+  console.log(`  maxAds:   ${maxAds}`);
+  console.log(`  country:  ${filterConfig.country}`);
+  console.log(`  language: ${filterConfig.language}`);
+  console.log(`  format:   ${filterConfig.format}`);
+
   await launchBrowser();
 
   const page = context.pages()[0] || (await context.newPage());
@@ -123,7 +135,34 @@ async function main() {
   log('BRAND', `Using brand: "${brandName}"`);
   await navigateToBrand(page, brandName);
 
+  const filterResult = await applyBrandFilters(page);
+  log('BRAND', `Filters applied — ad card visible after refresh: ${filterResult.refreshed}`);
+
   await detectAds(page);
+
+  const summary = await collectAdsForBrand(context, page);
+
+  const successRate =
+    summary.totalDiscovered > 0 ? (summary.totalProcessed / summary.totalDiscovered) * 100 : 0;
+  const previousSuccessRate = (42 / 69) * 100;
+
+  console.log('\nPREVIOUS RUN (unfiltered): discovered=69, processed=42, errors=27, successRate=' + previousSuccessRate.toFixed(1) + '%');
+  console.log(`\nTOTAL ADS DISCOVERED: ${summary.totalDiscovered}`);
+  console.log(`TOTAL ADS PROCESSED: ${summary.totalProcessed}`);
+  console.log(`TOTAL ADS SKIPPED: ${summary.totalSkipped}`);
+  console.log(`TOTAL DUPLICATES IGNORED: ${summary.totalDuplicatesIgnored}`);
+  console.log(`TOTAL ERRORS: ${summary.totalErrors}`);
+  console.log(`SUCCESS RATE: ${successRate.toFixed(1)}%`);
+
+  for (const ad of summary.ads) {
+    console.log(
+      `\nmediaId=${ad.mediaId} title="${ad.title}" transcriptLength=${ad.transcript.length} shareUrl=${ad.shareUrl}`
+    );
+  }
+
+  console.log(`\nFINAL ARRAY LENGTH: ${summary.ads.length}`);
+  console.log('SAMPLE (first two collected objects):');
+  console.log(JSON.stringify(summary.ads.slice(0, 2), null, 2));
 
   await askQuestion('\nBrowser is open and ready. Press Enter in this terminal to close it...\n');
 

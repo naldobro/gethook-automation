@@ -1,0 +1,202 @@
+'use strict';
+
+/**
+ * src/scraper/collect.js
+ *
+ * Phase 8: process every ad available for the currently-open brand page,
+ * not just the first. Reuses the entire single-ad pipeline per ad:
+ *
+ *   src/scraper/details.js         (openAdDetails / closeAdDetails)
+ *   src/scraper/prepareTranscript.js (generate + disable timestamps)
+ *   src/scraper/extract.js         (read the transcript)
+ *   src/scraper/share.js           (copy the Share URL)
+ *
+ * Ads are discovered and processed together, one at a time, rather than
+ * discovering the full list up front: the ad grid is a virtualized list
+ * (react-virtuoso, see src/scraper/ads.js) — scrolling to find later ads
+ * un-mounts earlier ones from the DOM, so a card is only guaranteed
+ * clickable while it's still on screen. Each newly-seen card is opened,
+ * processed, and closed immediately; only then does the loop scroll for
+ * more.
+ */
+
+const { log, warn, error } = require('../browser/logger');
+const { closeAdDetails } = require('./details');
+const { prepareTranscript } = require('./prepareTranscript');
+const { extractTranscript } = require('./extract');
+const { captureShareUrl } = require('./share');
+const { maxAds: MAX_ADS } = require('../config');
+
+const ACTION_TIMEOUT_MS = 15000;
+const MAX_SCROLL_ROUNDS = 500;
+const SCROLL_GROWTH_TIMEOUT_MS = 3000;
+const MEDIA_ID_PATTERN = /ads_media\/(\d+)\//;
+
+async function extractMediaId(card) {
+  const mediaSrc = await card
+    .getByTestId('media')
+    .locator('img, video')
+    .first()
+    .getAttribute('src')
+    .catch(() => null);
+  return mediaSrc ? (mediaSrc.match(MEDIA_ID_PATTERN)?.[1] ?? null) : null;
+}
+
+async function extractCardSummary(card) {
+  const title = await card
+    .getByTestId('title')
+    .first()
+    .textContent()
+    .then((t) => t?.trim() || null)
+    .catch(() => null);
+
+  const duration = await card
+    .getByTestId('media')
+    .first()
+    .textContent()
+    .then((t) => t?.trim() || null)
+    .catch(() => null);
+
+  return { title, duration };
+}
+
+/**
+ * Runs the full single-ad pipeline (open Details -> open Transcript tab
+ * -> prepare (generate + disable timestamps) -> extract -> capture Share
+ * URL -> close Details) against one already-visible card. Reuses every
+ * existing module unchanged.
+ */
+async function processOneAd(context, page, card, mediaId, cardSummary) {
+  const prep = await prepareTranscript(page, card);
+  const extraction = await extractTranscript(page, prep.transcriptPanel);
+  const shareUrl = await captureShareUrl(context, page, prep.dialog);
+  await closeAdDetails(page, prep.dialog);
+
+  return {
+    mediaId,
+    title: cardSummary.title,
+    duration: cardSummary.duration,
+    transcript: extraction.text,
+    shareUrl,
+  };
+}
+
+/**
+ * Scrolls the virtualized ad list's own scroller (found by walking up
+ * from a known ad card, so it's correct regardless of how many other
+ * virtuoso lists exist elsewhere on the page — e.g. a sidebar) down by
+ * one viewport, and waits for the actual rendered ad-card count to
+ * change rather than a fixed sleep. Returns false if nothing changed
+ * within the timeout (a real signal the end of the list was reached, not
+ * just "maybe still loading").
+ */
+async function scrollForMore(page, currentCount) {
+  const scroller = page
+    .getByTestId('ad-card')
+    .first()
+    .locator('xpath=ancestor::*[@data-testid="virtuoso-scroller"]')
+    .first();
+
+  await scroller.evaluate((el) => {
+    el.scrollTop = el.scrollTop + el.clientHeight;
+  }).catch(() => {});
+
+  return page
+    .waitForFunction(
+      (prevCount) => document.querySelectorAll('[data-testid="ad-card"]').length !== prevCount,
+      currentCount,
+      { timeout: SCROLL_GROWTH_TIMEOUT_MS }
+    )
+    .then(() => true)
+    .catch(() => false);
+}
+
+/**
+ * Discovers and processes every ad for the currently-open brand page, up
+ * to maxAds. Never aborts the whole run because one ad failed — each
+ * ad's pipeline is individually caught, logged, and skipped on error.
+ * Avoids reprocessing a mediaId already seen (whether successfully
+ * processed or not), including ones that reappear across scroll rounds
+ * due to the virtualized list's overscan buffer.
+ */
+async function collectAdsForBrand(context, page, maxAds = MAX_ADS) {
+  const cards = page.getByTestId('ad-card');
+  await cards.first().waitFor({ state: 'visible', timeout: ACTION_TIMEOUT_MS });
+
+  const seenIds = new Set();
+  const results = [];
+  let duplicatesIgnored = 0;
+  let skipped = 0;
+  let errors = 0;
+
+  for (let round = 0; round < MAX_SCROLL_ROUNDS && seenIds.size < maxAds; round++) {
+    const count = await cards.count();
+    let newThisRound = 0;
+
+    for (let i = 0; i < count && seenIds.size < maxAds; i++) {
+      const card = cards.nth(i);
+      const mediaId = await extractMediaId(card);
+
+      if (!mediaId) {
+        skipped += 1;
+        warn('COLLECT', `Card at position ${i} has no extractable mediaId; skipping.`);
+        continue;
+      }
+
+      if (seenIds.has(mediaId)) {
+        duplicatesIgnored += 1;
+        continue;
+      }
+
+      seenIds.add(mediaId);
+      newThisRound += 1;
+
+      const cardSummary = await extractCardSummary(card);
+      log('COLLECT', `Processing ad ${seenIds.size}/${maxAds}: mediaId=${mediaId} title="${cardSummary.title}"`);
+
+      try {
+        const result = await processOneAd(context, page, card, mediaId, cardSummary);
+        results.push(result);
+        log(
+          'COLLECT',
+          `  -> success. transcriptLength=${result.transcript.length}, shareUrl=${result.shareUrl}`
+        );
+      } catch (err) {
+        errors += 1;
+        error('COLLECT', `Failed to process ad mediaId=${mediaId}: ${err.message}`);
+        // Best-effort: make sure a half-open dialog doesn't break the next
+        // ad's attempt, even though this ad's own close step may not
+        // have run.
+        await page.keyboard.press('Escape').catch(() => {});
+      }
+    }
+
+    if (seenIds.size >= maxAds) break;
+
+    const grew = await scrollForMore(page, count);
+    if (!grew && newThisRound === 0) {
+      log('COLLECT', 'No new ads after scrolling — reached the end of the list.');
+      break;
+    }
+  }
+
+  const summary = {
+    totalDiscovered: seenIds.size,
+    totalProcessed: results.length,
+    totalSkipped: skipped,
+    totalDuplicatesIgnored: duplicatesIgnored,
+    totalErrors: errors,
+    ads: results,
+  };
+
+  log(
+    'COLLECT',
+    `Summary: discovered=${summary.totalDiscovered}, processed=${summary.totalProcessed}, ` +
+      `skipped=${summary.totalSkipped}, duplicatesIgnored=${summary.totalDuplicatesIgnored}, ` +
+      `errors=${summary.totalErrors}`
+  );
+
+  return summary;
+}
+
+module.exports = { collectAdsForBrand, MAX_ADS };

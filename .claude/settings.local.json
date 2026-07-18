@@ -8,7 +8,14 @@
       "Bash(node _inspect_tmp.js)",
       "Bash(node --check src/scraper/navigation.js)",
       "Bash(node src/browser/launch.js)",
-      "Bash(node --check src/scraper/ads.js)"
+      "Bash(node --check src/scraper/ads.js)",
+      "Bash(node --check src/scraper/transcript.js)",
+      "Bash(node --check src/browser/launch.js)",
+      "Bash(node --check src/scraper/prepareTranscript.js)",
+      "Bash(node --check src/scraper/extract.js)",
+      "Bash(node --check src/scraper/share.js)",
+      "Bash(pkill -INT -f \"_inspect_tmp.js\")",
+      "Bash(node --check src/scraper/filters.js)"
     ]
   }
 }
