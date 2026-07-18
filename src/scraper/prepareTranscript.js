@@ -35,12 +35,89 @@ const { log, warn } = require('../browser/logger');
 
 const ACTION_TIMEOUT_MS = 15000;
 const GENERATE_BUTTON_PROBE_MS = 3000;
+const GENERATE_CLICK_ATTEMPTS = 3;
+const STABILITY_TIMEOUT_MS = 5000;
 const POLL_MS = 200;
 const STABLE_CHECKS_REQUIRED = 2;
 const TIMESTAMPS_TOGGLE_SELECTOR = 'label:has-text("Show timestamps") [role="switch"]';
 
 function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+/**
+ * Waits for a locator's bounding box to stop moving across consecutive
+ * polls. GetHook can re-render the "Generate Transcription" button's
+ * subtree shortly after the dialog opens (observed live: Playwright
+ * reports "element is not stable" then "detached from the DOM, retrying"
+ * when a click races that re-render), so a bare visibility check isn't
+ * enough — this confirms the node has actually settled before it's
+ * clicked. An unreadable box (element momentarily detached) counts as
+ * "not yet stable" rather than an error.
+ */
+async function waitForBoundingBoxToSettle(locator, timeoutMs = STABILITY_TIMEOUT_MS) {
+  const deadline = Date.now() + timeoutMs;
+  let lastBox = null;
+  let stableCount = 0;
+
+  while (Date.now() < deadline) {
+    const box = await locator.boundingBox().catch(() => null);
+    const key = box ? `${box.x},${box.y},${box.width},${box.height}` : null;
+
+    if (key && key === lastBox) {
+      stableCount += 1;
+      if (stableCount >= STABLE_CHECKS_REQUIRED) return true;
+    } else {
+      stableCount = key ? 1 : 0;
+    }
+    lastBox = key;
+    await sleep(POLL_MS);
+  }
+  return false;
+}
+
+/**
+ * Clicks the "Generate Transcription" button, tolerating the mid-render
+ * race described above: waits for the button to stop moving before each
+ * attempt, and retries a bounded number of times if a click still fails
+ * to land. If the button disappears between attempts, a prior click most
+ * likely already registered before Playwright reported it as failed —
+ * that's left for the caller's transcript-content check to confirm
+ * either way, rather than treated as an error here.
+ */
+async function clickGenerateButtonWithRetry(button) {
+  let lastError = null;
+
+  for (let attempt = 1; attempt <= GENERATE_CLICK_ATTEMPTS; attempt++) {
+    const stillVisible = await button
+      .waitFor({ state: 'visible', timeout: GENERATE_BUTTON_PROBE_MS })
+      .then(() => true)
+      .catch(() => false);
+
+    if (!stillVisible) {
+      log(
+        'PREPARE',
+        '"Generate Transcription" button no longer present — assuming a prior click already registered.'
+      );
+      return;
+    }
+
+    await waitForBoundingBoxToSettle(button);
+
+    try {
+      await button.click({ timeout: ACTION_TIMEOUT_MS });
+      return;
+    } catch (err) {
+      lastError = err;
+      warn(
+        'PREPARE',
+        `"Generate Transcription" click attempt ${attempt}/${GENERATE_CLICK_ATTEMPTS} failed ` +
+          '(button likely re-rendered mid-click); retrying.'
+      );
+    }
+  }
+
+  throw lastError;
 }
 
 /**
@@ -86,7 +163,7 @@ async function ensureTranscriptGenerated(dialog, transcriptPanel) {
   }
 
   log('PREPARE', '"Generate Transcription" button found. Clicking once...');
-  await generateButton.click({ timeout: ACTION_TIMEOUT_MS });
+  await clickGenerateButtonWithRetry(generateButton);
 
   await generateButton.waitFor({ state: 'hidden', timeout: ACTION_TIMEOUT_MS }).catch(() => {
     warn('PREPARE', '"Generate Transcription" button did not disappear within the timeout; continuing.');
