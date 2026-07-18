@@ -25,7 +25,7 @@ const { closeAdDetails } = require('./details');
 const { prepareTranscript } = require('./prepareTranscript');
 const { extractTranscript } = require('./extract');
 const { captureShareUrl } = require('./share');
-const { maxAds: MAX_ADS } = require('../config');
+const { maxAds: MAX_ADS, filters: FILTER_CONFIG } = require('../config');
 
 const ACTION_TIMEOUT_MS = 15000;
 const MAX_SCROLL_ROUNDS = 500;
@@ -65,8 +65,12 @@ async function extractCardSummary(card) {
  * -> prepare (generate + disable timestamps) -> extract -> capture Share
  * URL -> close Details) against one already-visible card. Reuses every
  * existing module unchanged.
+ *
+ * Builds the one canonical ad object here — this is the only place in
+ * the project that constructs it, so there is exactly one data model for
+ * a collected ad, not one per consumer (export, summary, etc.).
  */
-async function processOneAd(context, page, card, mediaId, cardSummary) {
+async function processOneAd(context, page, card, mediaId, cardSummary, brandName) {
   const prep = await prepareTranscript(page, card);
   const extraction = await extractTranscript(page, prep.transcriptPanel);
   const shareUrl = await captureShareUrl(context, page, prep.dialog);
@@ -74,10 +78,17 @@ async function processOneAd(context, page, card, mediaId, cardSummary) {
 
   return {
     mediaId,
+    brand: brandName,
     title: cardSummary.title,
     duration: cardSummary.duration,
     transcript: extraction.text,
     shareUrl,
+    filters: {
+      country: FILTER_CONFIG.country,
+      language: FILTER_CONFIG.language,
+      format: FILTER_CONFIG.format,
+    },
+    collectedAt: new Date().toISOString(),
   };
 }
 
@@ -119,7 +130,7 @@ async function scrollForMore(page, currentCount) {
  * processed or not), including ones that reappear across scroll rounds
  * due to the virtualized list's overscan buffer.
  */
-async function collectAdsForBrand(context, page, maxAds = MAX_ADS) {
+async function collectAdsForBrand(context, page, brandName, maxAds = MAX_ADS) {
   const cards = page.getByTestId('ad-card');
   await cards.first().waitFor({ state: 'visible', timeout: ACTION_TIMEOUT_MS });
 
@@ -155,7 +166,7 @@ async function collectAdsForBrand(context, page, maxAds = MAX_ADS) {
       log('COLLECT', `Processing ad ${seenIds.size}/${maxAds}: mediaId=${mediaId} title="${cardSummary.title}"`);
 
       try {
-        const result = await processOneAd(context, page, card, mediaId, cardSummary);
+        const result = await processOneAd(context, page, card, mediaId, cardSummary, brandName);
         results.push(result);
         log(
           'COLLECT',

@@ -10,12 +10,19 @@
  * reads from or copies the user's real profile — so the user's everyday
  * Chrome can stay open and running throughout.
  *
+ * Flow: launch browser -> navigate to brand -> apply filters -> collect
+ * ads -> export JSON -> print summary -> close browser (or wait for
+ * Enter first, if --inspect was passed).
+ *
  * Flags:
  *   --reset-profile   Wipe the saved automation profile before launching,
  *                      forcing a fresh manual login.
+ *   --inspect         Keep the browser open (waiting for Enter) after the
+ *                      run finishes, instead of closing automatically.
+ *                      Normal runs close and exit without any pause.
  *
  * Usage:
- *   node src/browser/launch.js [brandName]
+ *   node src/browser/launch.js [brandName] [--inspect] [--reset-profile]
  *
  *   brandName defaults to config.DEFAULT_BRAND_NAME when omitted.
  */
@@ -32,9 +39,9 @@ const {
 const { ensureLoggedIn } = require('./session');
 const { askQuestion } = require('./prompt');
 const { navigateToBrand } = require('../scraper/navigation');
-const { detectAds } = require('../scraper/ads');
 const { collectAdsForBrand } = require('../scraper/collect');
 const { applyBrandFilters } = require('../scraper/filters');
+const { exportAdsToJson } = require('../export/json');
 // Imported only for the startup report below — collect.js and filters.js
 // each read the values they actually need directly from ../config
 // themselves, rather than having them threaded through here.
@@ -57,6 +64,7 @@ function parseArgs(argv) {
 
 const { flags, positional } = parseArgs(process.argv.slice(2));
 const brandName = positional[0] || DEFAULT_BRAND_NAME;
+const inspectMode = flags.has('--inspect');
 
 // Module-level so the SIGINT handler can reach it for a graceful shutdown.
 let context;
@@ -138,33 +146,35 @@ async function main() {
   const filterResult = await applyBrandFilters(page);
   log('BRAND', `Filters applied — ad card visible after refresh: ${filterResult.refreshed}`);
 
-  await detectAds(page);
+  const collectionStart = Date.now();
+  const summary = await collectAdsForBrand(context, page, brandName);
+  const collectionDurationMs = Date.now() - collectionStart;
 
-  const summary = await collectAdsForBrand(context, page);
+  const exportedPath = exportAdsToJson(brandName, summary.ads);
 
   const successRate =
     summary.totalDiscovered > 0 ? (summary.totalProcessed / summary.totalDiscovered) * 100 : 0;
-  const previousSuccessRate = (42 / 69) * 100;
 
-  console.log('\nPREVIOUS RUN (unfiltered): discovered=69, processed=42, errors=27, successRate=' + previousSuccessRate.toFixed(1) + '%');
-  console.log(`\nTOTAL ADS DISCOVERED: ${summary.totalDiscovered}`);
-  console.log(`TOTAL ADS PROCESSED: ${summary.totalProcessed}`);
-  console.log(`TOTAL ADS SKIPPED: ${summary.totalSkipped}`);
-  console.log(`TOTAL DUPLICATES IGNORED: ${summary.totalDuplicatesIgnored}`);
-  console.log(`TOTAL ERRORS: ${summary.totalErrors}`);
-  console.log(`SUCCESS RATE: ${successRate.toFixed(1)}%`);
+  console.log(`\nExported ${summary.ads.length} ad(s) to: ${exportedPath}`);
+  console.log('First exported object:');
+  console.log(JSON.stringify(summary.ads[0] ?? null, null, 2));
 
-  for (const ad of summary.ads) {
-    console.log(
-      `\nmediaId=${ad.mediaId} title="${ad.title}" transcriptLength=${ad.transcript.length} shareUrl=${ad.shareUrl}`
+  console.log('\n----- SUMMARY -----');
+  console.log(`Brand: ${brandName}`);
+  console.log(`Ads discovered: ${summary.totalDiscovered}`);
+  console.log(`Ads processed: ${summary.totalProcessed}`);
+  console.log(`Errors: ${summary.totalErrors}`);
+  console.log(`Success rate: ${successRate.toFixed(1)}%`);
+  console.log(`JSON file path: ${exportedPath}`);
+  console.log(`Collection duration: ${(collectionDurationMs / 1000).toFixed(1)}s`);
+
+  if (inspectMode) {
+    await askQuestion(
+      '\n--inspect: browser is open and ready. Press Enter in this terminal to close it...\n'
     );
+  } else {
+    log('CLOSE', 'Run complete — closing browser automatically (pass --inspect to keep it open).');
   }
-
-  console.log(`\nFINAL ARRAY LENGTH: ${summary.ads.length}`);
-  console.log('SAMPLE (first two collected objects):');
-  console.log(JSON.stringify(summary.ads.slice(0, 2), null, 2));
-
-  await askQuestion('\nBrowser is open and ready. Press Enter in this terminal to close it...\n');
 
   log('CLOSE', 'Closing browser...');
   await context.close();
