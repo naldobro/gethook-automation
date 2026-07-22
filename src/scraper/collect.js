@@ -81,6 +81,9 @@ async function processOneAd(context, page, card, mediaId, cardSummary, brandName
     brand: brandName,
     title: cardSummary.title,
     duration: cardSummary.duration,
+    savedDate: prep.overview.savedDate,
+    activePeriod: prep.overview.activePeriod,
+    landingPage: prep.overview.landingPage,
     transcript: extraction.text,
     shareUrl,
     filters: {

@@ -31,6 +31,7 @@
 
 const { openAdDetails } = require('./details');
 const { openTranscriptTab } = require('./transcript');
+const { extractOverviewFields } = require('./overview');
 const { log, warn } = require('../browser/logger');
 
 const ACTION_TIMEOUT_MS = 15000;
@@ -367,6 +368,7 @@ async function ensureTimestampsDisabled(dialog, transcriptPanel) {
 async function prepareTranscript(page, card = page.getByTestId('ad-card').first()) {
   await openAdDetails(page, card);
   const dialog = page.getByRole('dialog');
+  const overview = await extractOverviewFields(page, dialog);
   const transcriptPanel = await openTranscriptTab(page);
 
   const statusWatcher = watchTranscriptionStatus(page);
@@ -391,7 +393,7 @@ async function prepareTranscript(page, card = page.getByTestId('ad-card').first(
     const ready = Boolean(generation.settledText) && timestamps.disabled;
     log('PREPARE', `Transcript ready for extraction: ${ready}.`);
 
-    return { dialog, transcriptPanel, generation, timestamps, ready };
+    return { dialog, transcriptPanel, overview, generation, timestamps, ready };
   } finally {
     statusWatcher.stop();
   }
