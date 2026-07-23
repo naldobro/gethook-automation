@@ -31,12 +31,12 @@ const { closeAdDetails } = require('./details');
 const { prepareTranscript, BackendTranscriptionFailedError } = require('./prepareTranscript');
 const { extractTranscript } = require('./extract');
 const { captureShareUrl } = require('./share');
-const { upsertBrand, upsertAd } = require('../supabase/adsRepository');
+const { upsertBrand, upsertAd, getExistingMediaIds } = require('../supabase/adsRepository');
 const { maxAds: MAX_ADS, filters: FILTER_CONFIG } = require('../config');
 
 const ACTION_TIMEOUT_MS = 15000;
 const MAX_SCROLL_ROUNDS = 500;
-const SCROLL_GROWTH_TIMEOUT_MS = 3000;
+const SCROLL_GROWTH_TIMEOUT_MS = 10000;
 const MEDIA_ID_PATTERN = /ads_media\/(\d+)\//;
 
 async function extractMediaId(card) {
@@ -103,33 +103,70 @@ async function processOneAd(context, page, card, mediaId, cardSummary, brandName
 }
 
 /**
- * Scrolls the virtualized ad list's own scroller (found by walking up
- * from a known ad card, so it's correct regardless of how many other
- * virtuoso lists exist elsewhere on the page — e.g. a sidebar) down by
- * one viewport, and waits for the actual rendered ad-card count to
- * change rather than a fixed sleep. Returns false if nothing changed
- * within the timeout (a real signal the end of the list was reached, not
- * just "maybe still loading").
+ * Finds the scrollable ancestor of the ad cards and scrolls it down by
+ * one viewport. The ad list's scroll container is detected at runtime
+ * (the first ancestor with overflow-y: auto/scroll that has overflowing
+ * content) rather than by a hardcoded data-testid, since the host app
+ * can change which element owns the scroll.
+ *
+ * Mid-list: scrollTop moved → brief render pause, return true.
+ * At bottom: scrollTop didn't move → poll for scrollHeight growth
+ * (server-side pagination), returning false if nothing loads.
  */
-async function scrollForMore(page, currentCount) {
-  const scroller = page
-    .getByTestId('ad-card')
-    .first()
-    .locator('xpath=ancestor::*[@data-testid="virtuoso-scroller"]')
-    .first();
+async function scrollForMore(page) {
+  const findAndScroll = () => {
+    const card = document.querySelector('[data-testid="ad-card"]');
+    if (!card) return { scrolled: false, scrollTop: 0, scrollHeight: 0, clientHeight: 0 };
+    let scroller = null;
+    let el = card.parentElement;
+    while (el && el !== document.body) {
+      const style = getComputedStyle(el);
+      if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && el.scrollHeight > el.clientHeight) {
+        scroller = el;
+        break;
+      }
+      el = el.parentElement;
+    }
+    if (!scroller) scroller = document.documentElement;
+    const before = scroller.scrollTop;
+    scroller.scrollTop += scroller.clientHeight;
+    return { scrolled: scroller.scrollTop > before + 1, scrollTop: scroller.scrollTop, scrollHeight: scroller.scrollHeight, clientHeight: scroller.clientHeight };
+  };
 
-  await scroller.evaluate((el) => {
-    el.scrollTop = el.scrollTop + el.clientHeight;
-  }).catch(() => {});
+  const getScrollHeight = () => {
+    const card = document.querySelector('[data-testid="ad-card"]');
+    if (!card) return 0;
+    let el = card.parentElement;
+    while (el && el !== document.body) {
+      const style = getComputedStyle(el);
+      if ((style.overflowY === 'auto' || style.overflowY === 'scroll') && el.scrollHeight > el.clientHeight) return el.scrollHeight;
+      el = el.parentElement;
+    }
+    return document.documentElement.scrollHeight;
+  };
 
-  return page
-    .waitForFunction(
-      (prevCount) => document.querySelectorAll('[data-testid="ad-card"]').length !== prevCount,
-      currentCount,
-      { timeout: SCROLL_GROWTH_TIMEOUT_MS }
-    )
-    .then(() => true)
-    .catch(() => false);
+  const scrollInfo = await page.evaluate(findAndScroll);
+  log('SCROLL', `scrollTop=${scrollInfo.scrollTop}, scrollHeight=${scrollInfo.scrollHeight}, clientHeight=${scrollInfo.clientHeight}, moved=${scrollInfo.scrolled}`);
+
+  if (!scrollInfo.scrolled) {
+    const prevHeight = scrollInfo.scrollHeight;
+    const deadline = Date.now() + SCROLL_GROWTH_TIMEOUT_MS;
+
+    while (Date.now() < deadline) {
+      await page.waitForTimeout(500);
+      const curHeight = await page.evaluate(getScrollHeight);
+      if (curHeight > prevHeight) {
+        await page.evaluate(findAndScroll);
+        await page.waitForTimeout(300);
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  await page.waitForTimeout(300);
+  return true;
 }
 
 /**
@@ -144,9 +181,10 @@ async function collectAdsForBrand(context, page, brandName, maxAds = MAX_ADS) {
   const cards = page.getByTestId('ad-card');
   await cards.first().waitFor({ state: 'visible', timeout: ACTION_TIMEOUT_MS });
 
+  const brandUrl = page.url();
   let brandId = null;
   try {
-    brandId = await upsertBrand(brandName);
+    brandId = await upsertBrand(brandName, brandUrl);
     log('COLLECT', `Supabase brand ready: "${brandName}" (id=${brandId}).`);
   } catch (err) {
     warn('COLLECT', `Could not upsert brand "${brandName}" to Supabase; skipping DB writes for this run: ${err.message}`);
@@ -161,9 +199,29 @@ async function collectAdsForBrand(context, page, brandName, maxAds = MAX_ADS) {
   let dbSaved = 0;
   let dbErrors = 0;
 
+  if (brandId !== null) {
+    try {
+      const existing = await getExistingMediaIds(brandId);
+      for (const id of existing) seenIds.add(id);
+      if (seenIds.size > 0) {
+        log('COLLECT', `Skipping ${seenIds.size} already-scraped ad(s) found in Supabase.`);
+      }
+    } catch (err) {
+      warn('COLLECT', `Could not load existing media IDs from Supabase: ${err.message}`);
+    }
+  }
+
   for (let round = 0; round < MAX_SCROLL_ROUNDS && seenIds.size < maxAds; round++) {
-    const count = await cards.count();
+    let count;
+    try {
+      count = await cards.count();
+    } catch {
+      warn('COLLECT', 'Page became unresponsive — ending collection with results gathered so far.');
+      break;
+    }
     let newThisRound = 0;
+
+    log('COLLECT', `Round ${round}: ${count} card(s) in DOM, seenIds=${seenIds.size}`);
 
     for (let i = 0; i < count && seenIds.size < maxAds; i++) {
       const card = cards.nth(i);
@@ -229,7 +287,8 @@ async function collectAdsForBrand(context, page, brandName, maxAds = MAX_ADS) {
 
     if (seenIds.size >= maxAds) break;
 
-    const grew = await scrollForMore(page, count);
+    const grew = await scrollForMore(page);
+    log('COLLECT', `Round ${round} done: newThisRound=${newThisRound}, grew=${grew}`);
     if (!grew && newThisRound === 0) {
       log('COLLECT', 'No new ads after scrolling — reached the end of the list.');
       break;

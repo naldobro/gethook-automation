@@ -35,13 +35,13 @@ const { extractOverviewFields } = require('./overview');
 const { log, warn } = require('../browser/logger');
 
 const ACTION_TIMEOUT_MS = 15000;
-const GENERATE_BUTTON_PROBE_MS = 3000;
+const GENERATION_SETTLE_TIMEOUT_MS = 60000;
+const GENERATE_BUTTON_PROBE_MS = 300;
 const GENERATE_CLICK_ATTEMPTS = 3;
 const GENERATION_FLOW_ATTEMPTS = 3;
-const STABILITY_TIMEOUT_MS = 5000;
 const POLL_MS = 200;
 const STABLE_CHECKS_REQUIRED = 2;
-const GENERATE_BUTTON_NAME_PATTERN = /generate transcri/i;
+const GENERATE_BUTTON_NAME_PATTERN = /^generate transcri/i;
 const TIMESTAMPS_TOGGLE_SELECTOR = 'label:has-text("Show timestamps") [role="switch"]';
 const TRANSCRIBE_API_PATTERN = /\/api\/ad-script\/transcribe(\?|$)/;
 
@@ -96,44 +96,11 @@ function watchTranscriptionStatus(page) {
 }
 
 /**
- * Waits for a locator's bounding box to stop moving across consecutive
- * polls. GetHook can re-render the "Generate Transcription" button's
- * subtree shortly after the dialog opens (observed live: Playwright
- * reports "element is not stable" then "detached from the DOM, retrying"
- * when a click races that re-render), so a bare visibility check isn't
- * enough — this confirms the node has actually settled before it's
- * clicked. An unreadable box (element momentarily detached) counts as
- * "not yet stable" rather than an error.
- */
-async function waitForBoundingBoxToSettle(locator, timeoutMs = STABILITY_TIMEOUT_MS) {
-  const deadline = Date.now() + timeoutMs;
-  let lastBox = null;
-  let stableCount = 0;
-
-  while (Date.now() < deadline) {
-    const box = await locator.boundingBox().catch(() => null);
-    const key = box ? `${box.x},${box.y},${box.width},${box.height}` : null;
-
-    if (key && key === lastBox) {
-      stableCount += 1;
-      if (stableCount >= STABLE_CHECKS_REQUIRED) return true;
-    } else {
-      stableCount = key ? 1 : 0;
-    }
-    lastBox = key;
-    await sleep(POLL_MS);
-  }
-  return false;
-}
-
-/**
- * Clicks the "Generate Transcription" button, tolerating the mid-render
- * race described above: waits for the button to stop moving before each
- * attempt, and retries a bounded number of times if a click still fails
- * to land. If the button disappears between attempts, a prior click most
- * likely already registered before Playwright reported it as failed —
- * that's left for the caller's transcript-content check to confirm
- * either way, rather than treated as an error here.
+ * Clicks the "Generate Transcription" button with force: true to bypass
+ * Playwright's stability checks (the button can re-render mid-click in
+ * GetHook's React tree). Retries a bounded number of times if the click
+ * still fails. If the button disappears between attempts, a prior click
+ * most likely already registered.
  */
 async function clickGenerateButtonWithRetry(button) {
   let lastError = null;
@@ -152,17 +119,14 @@ async function clickGenerateButtonWithRetry(button) {
       return;
     }
 
-    await waitForBoundingBoxToSettle(button);
-
     try {
-      await button.click({ timeout: ACTION_TIMEOUT_MS });
+      await button.click({ timeout: ACTION_TIMEOUT_MS, force: true });
       return;
     } catch (err) {
       lastError = err;
       warn(
         'PREPARE',
-        `"Generate Transcription" click attempt ${attempt}/${GENERATE_CLICK_ATTEMPTS} failed ` +
-          '(button likely re-rendered mid-click); retrying.'
+        `"Generate Transcription" click attempt ${attempt}/${GENERATE_CLICK_ATTEMPTS} failed; retrying.`
       );
     }
   }
@@ -231,7 +195,8 @@ async function ensureTranscriptGenerated(statusWatcher, dialog, transcriptPanel)
 
   if (!present) {
     log('PREPARE', '"Generate Transcription" button not present — transcript already exists.');
-    return { required: false, clicked: false, settledText: await waitForTextToSettle(transcriptPanel) };
+    const text = (await transcriptPanel.innerText().catch(() => '')).trim();
+    return { required: false, clicked: false, settledText: text };
   }
 
   let text = '';
@@ -247,7 +212,7 @@ async function ensureTranscriptGenerated(statusWatcher, dialog, transcriptPanel)
       warn('PREPARE', '"Generate Transcription" button did not disappear within the timeout; continuing.');
     });
 
-    text = await waitForTextToSettle(transcriptPanel);
+    text = await waitForTextToSettle(transcriptPanel, GENERATION_SETTLE_TIMEOUT_MS);
 
     const backendStatus = statusWatcher.getStatus();
     if (backendStatus === 'failed') {
@@ -332,7 +297,7 @@ async function ensureTimestampsDisabled(dialog, transcriptPanel) {
   }
   log('PREPARE', `Toggle confirmed: aria-checked="${finalChecked}".`);
 
-  await waitForTextToSettle(transcriptPanel);
+  await waitForTextToSettle(transcriptPanel, 3000);
   log('PREPARE', 'Transcript content has stabilized after disabling timestamps.');
 
   return {

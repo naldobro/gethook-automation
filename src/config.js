@@ -10,7 +10,7 @@
  */
 
 module.exports = {
-  maxAds: 300,
+  maxAds: 100,
 
   filters: {
     country: 'US',

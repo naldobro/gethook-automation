@@ -21,10 +21,12 @@ const { supabase } = require('./client');
  * Intended to be called once per collection run (brand name is constant
  * across all ads in that run), not once per ad.
  */
-async function upsertBrand(brandName) {
+async function upsertBrand(brandName, brandUrl = null) {
+  const row = { name: brandName };
+  if (brandUrl) row.url = brandUrl;
   const { data, error } = await supabase
     .from('brands')
-    .upsert({ name: brandName }, { onConflict: 'name' })
+    .upsert(row, { onConflict: 'name' })
     .select('id')
     .single();
 
@@ -35,10 +37,19 @@ async function upsertBrand(brandName) {
   return data.id;
 }
 
-/**
- * Upserts one ad row keyed on media_id. `ad` is the canonical ad object
- * built by src/scraper/collect.js's processOneAd.
- */
+async function getExistingMediaIds(brandId) {
+  const { data, error } = await supabase
+    .from('ads')
+    .select('media_id')
+    .eq('brand_id', brandId);
+
+  if (error) {
+    throw new Error(`Failed to fetch existing media IDs: ${error.message}`);
+  }
+
+  return data.map((row) => row.media_id);
+}
+
 async function upsertAd(ad, brandId) {
   const { error } = await supabase.from('ads').upsert(
     {
@@ -61,4 +72,4 @@ async function upsertAd(ad, brandId) {
   }
 }
 
-module.exports = { upsertBrand, upsertAd };
+module.exports = { upsertBrand, upsertAd, getExistingMediaIds };

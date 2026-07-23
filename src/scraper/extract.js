@@ -13,8 +13,6 @@
 const { log, error } = require('../browser/logger');
 
 const ACTION_TIMEOUT_MS = 15000;
-const STABLE_POLL_MS = 250;
-const STABLE_CHECKS_REQUIRED = 2;
 const PREVIEW_LINE_COUNT = 10;
 
 // The toolbar row (Show timestamps toggle, Copy transcript, any future
@@ -23,43 +21,6 @@ const PREVIEW_LINE_COUNT = 10;
 // controls inside it. The transcript body is whatever comes right after
 // that row as a sibling.
 const HEADER_ROW_SELECTOR = 'div:has(> label:has-text("Show timestamps"))';
-
-function sleep(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
-/**
- * Polls a locator's rendered text (via innerText, which approximates what
- * a user actually sees — respecting CSS visibility/white-space/line
- * breaks, unlike textContent) until it is non-empty and unchanged across
- * consecutive polls. There is no Playwright event for "dynamically-loaded
- * text has finished rendering," so this is the condition-based equivalent:
- * it waits on the actual content this function depends on, not a guessed
- * duration.
- */
-async function waitForTextToSettle(locator, timeoutMs = ACTION_TIMEOUT_MS) {
-  const deadline = Date.now() + timeoutMs;
-  let lastText = null;
-  let stableCount = 0;
-
-  while (Date.now() < deadline) {
-    const text = (await locator.innerText().catch(() => '')).trim();
-
-    if (text.length > 0 && text === lastText) {
-      stableCount += 1;
-      if (stableCount >= STABLE_CHECKS_REQUIRED) {
-        return text;
-      }
-    } else {
-      stableCount = text.length > 0 ? 1 : 0;
-    }
-
-    lastText = text;
-    await sleep(STABLE_POLL_MS);
-  }
-
-  return (lastText || '').trim();
-}
 
 /**
  * Resolves the live transcript-body container, positioned structurally
@@ -94,11 +55,6 @@ async function resolveTranscriptBody(transcriptPanel) {
  * panel, excluding the toolbar row.
  */
 async function extractTranscript(page, transcriptPanel) {
-  // Wait for the panel's raw content to finish rendering before resolving
-  // the body container — resolving mid-render risks picking up a still-
-  // empty or partially-mounted structure.
-  await waitForTextToSettle(transcriptPanel);
-
   const { container, selectorDescription } = await resolveTranscriptBody(transcriptPanel);
   const text = (await container.innerText().catch(() => '')).trim();
 
