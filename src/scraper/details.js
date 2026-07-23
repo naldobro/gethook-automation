@@ -24,7 +24,7 @@ const ACTION_TIMEOUT_MS = 15000;
  * (src/scraper/ads.js) — every ad card contains exactly one
  * data-testid="cta-details" <button>Details</button>.
  *
- * Verification: getByRole('dialog'). GetHook's UI is built on shadcn/Radix
+ * Verification: getByRole('dialog', { name: 'Ad Details' }). GetHook's UI is built on shadcn/Radix
  * primitives (evident from the data-slot="card"/"button"/"badge"
  * attributes seen on every element inspected so far). Radix's
  * Dialog/Sheet/Drawer components — the whole family used for panels like
@@ -35,6 +35,14 @@ const ACTION_TIMEOUT_MS = 15000;
  * Waiting on the click alone would only prove the button was clicked, not
  * that a panel actually opened; requiring a role="dialog" element to
  * become visible proves the latter.
+ *
+ * The accessible name filter ({ name: 'Ad Details' }) is required, not
+ * optional, because the page also renders an unrelated role="dialog"
+ * element for a support chat widget (accessible name "Chat window") —
+ * confirmed live, an unscoped getByRole('dialog') throws a strict-mode
+ * violation once that widget is present. The dialog's own visible title
+ * ("Ad Details") is what supplies this accessible name via
+ * aria-labelledby, so it's tied to the panel's own markup, not a guess.
  */
 async function openAdDetails(page, card) {
   await card.waitFor({ state: 'visible', timeout: ACTION_TIMEOUT_MS });
@@ -45,9 +53,9 @@ async function openAdDetails(page, card) {
   log('DETAILS', 'Clicking "Details" on the ad card...');
   await detailsButton.click({ timeout: ACTION_TIMEOUT_MS });
 
-  const panel = page.getByRole('dialog');
+  const panel = page.getByRole('dialog', { name: 'Ad Details' });
   await panel.waitFor({ state: 'visible', timeout: ACTION_TIMEOUT_MS });
-  log('DETAILS', 'Details panel confirmed open (role="dialog" is visible).');
+  log('DETAILS', 'Details panel confirmed open (role="dialog", name="Ad Details" is visible).');
 
   return panel;
 }

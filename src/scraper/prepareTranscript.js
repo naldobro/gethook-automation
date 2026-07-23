@@ -367,7 +367,10 @@ async function ensureTimestampsDisabled(dialog, transcriptPanel) {
  */
 async function prepareTranscript(page, card = page.getByTestId('ad-card').first()) {
   await openAdDetails(page, card);
-  const dialog = page.getByRole('dialog');
+  // Scoped by name to avoid a strict-mode match against the page's
+  // unrelated support-chat dialog (accessible name "Chat window") — see
+  // src/scraper/details.js.
+  const dialog = page.getByRole('dialog', { name: 'Ad Details' });
   const overview = await extractOverviewFields(page, dialog);
   const transcriptPanel = await openTranscriptTab(page);
 

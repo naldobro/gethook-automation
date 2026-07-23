@@ -58,7 +58,14 @@ async function captureShareUrl(context, page, dialog) {
   await shareButton.waitFor({ state: 'visible', timeout: ACTION_TIMEOUT_MS });
 
   log('SHARE', 'Clicking "Share ad" once...');
-  await shareButton.click({ timeout: ACTION_TIMEOUT_MS });
+  // force: true — confirmed live, a third-party Crisp support-chat widget
+  // (unrelated to the Details dialog) can render on top of this button
+  // and fail Playwright's actionability check ("intercepts pointer
+  // events") even though the button itself resolves correctly and is
+  // genuinely visible/enabled. This dispatches the click on the real,
+  // already-verified button element directly rather than working around
+  // the overlay's own markup.
+  await shareButton.click({ timeout: ACTION_TIMEOUT_MS, force: true });
 
   const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
   const clipboard = (clipboardText || '').trim();

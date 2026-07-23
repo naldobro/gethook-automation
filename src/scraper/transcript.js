@@ -43,7 +43,10 @@ const ACTION_TIMEOUT_MS = 15000;
  * assumption based on the click having been dispatched.
  */
 async function openTranscriptTab(page) {
-  const dialog = page.getByRole('dialog');
+  // Scoped by name to avoid a strict-mode match against the page's
+  // unrelated support-chat dialog (accessible name "Chat window") — see
+  // src/scraper/details.js.
+  const dialog = page.getByRole('dialog', { name: 'Ad Details' });
   await dialog.waitFor({ state: 'visible', timeout: ACTION_TIMEOUT_MS });
 
   const transcriptControl = dialog

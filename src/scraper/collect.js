@@ -18,6 +18,12 @@
  * clickable while it's still on screen. Each newly-seen card is opened,
  * processed, and closed immediately; only then does the loop scroll for
  * more.
+ *
+ * Milestone 2, Step 2: each successfully processed ad is also upserted
+ * into Supabase (src/supabase/adsRepository.js), as a side channel next
+ * to the existing JSON export — not a replacement for it. A Supabase
+ * failure is caught and counted separately (totalDbErrors) and never
+ * affects totalProcessed, totalErrors, or what ends up in the JSON file.
  */
 
 const { log, warn, error } = require('../browser/logger');
@@ -25,6 +31,7 @@ const { closeAdDetails } = require('./details');
 const { prepareTranscript, BackendTranscriptionFailedError } = require('./prepareTranscript');
 const { extractTranscript } = require('./extract');
 const { captureShareUrl } = require('./share');
+const { upsertBrand, upsertAd } = require('../supabase/adsRepository');
 const { maxAds: MAX_ADS, filters: FILTER_CONFIG } = require('../config');
 
 const ACTION_TIMEOUT_MS = 15000;
@@ -137,12 +144,22 @@ async function collectAdsForBrand(context, page, brandName, maxAds = MAX_ADS) {
   const cards = page.getByTestId('ad-card');
   await cards.first().waitFor({ state: 'visible', timeout: ACTION_TIMEOUT_MS });
 
+  let brandId = null;
+  try {
+    brandId = await upsertBrand(brandName);
+    log('COLLECT', `Supabase brand ready: "${brandName}" (id=${brandId}).`);
+  } catch (err) {
+    warn('COLLECT', `Could not upsert brand "${brandName}" to Supabase; skipping DB writes for this run: ${err.message}`);
+  }
+
   const seenIds = new Set();
   const results = [];
   const skippedAds = [];
   let duplicatesIgnored = 0;
   let skipped = 0;
   let errors = 0;
+  let dbSaved = 0;
+  let dbErrors = 0;
 
   for (let round = 0; round < MAX_SCROLL_ROUNDS && seenIds.size < maxAds; round++) {
     const count = await cards.count();
@@ -176,6 +193,17 @@ async function collectAdsForBrand(context, page, brandName, maxAds = MAX_ADS) {
           'COLLECT',
           `  -> success. transcriptLength=${result.transcript.length}, shareUrl=${result.shareUrl}`
         );
+
+        if (brandId !== null) {
+          try {
+            await upsertAd(result, brandId);
+            dbSaved += 1;
+            log('COLLECT', `  -> saved to Supabase (mediaId=${mediaId}).`);
+          } catch (dbErr) {
+            dbErrors += 1;
+            error('COLLECT', `Failed to save mediaId=${mediaId} to Supabase: ${dbErr.message}`);
+          }
+        }
       } catch (err) {
         if (err instanceof BackendTranscriptionFailedError) {
           skippedAds.push({
@@ -215,6 +243,8 @@ async function collectAdsForBrand(context, page, brandName, maxAds = MAX_ADS) {
     totalDuplicatesIgnored: duplicatesIgnored,
     totalErrors: errors,
     totalBackendFailures: skippedAds.length,
+    totalDbSaved: dbSaved,
+    totalDbErrors: dbErrors,
     ads: results,
     skippedAds,
   };
@@ -223,7 +253,8 @@ async function collectAdsForBrand(context, page, brandName, maxAds = MAX_ADS) {
     'COLLECT',
     `Summary: discovered=${summary.totalDiscovered}, processed=${summary.totalProcessed}, ` +
       `skipped=${summary.totalSkipped}, duplicatesIgnored=${summary.totalDuplicatesIgnored}, ` +
-      `errors=${summary.totalErrors}, backendFailures=${summary.totalBackendFailures}`
+      `errors=${summary.totalErrors}, backendFailures=${summary.totalBackendFailures}, ` +
+      `dbSaved=${summary.totalDbSaved}, dbErrors=${summary.totalDbErrors}`
   );
 
   return summary;
