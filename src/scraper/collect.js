@@ -31,7 +31,7 @@ const { closeAdDetails } = require('./details');
 const { prepareTranscript, BackendTranscriptionFailedError } = require('./prepareTranscript');
 const { extractTranscript } = require('./extract');
 const { captureShareUrl } = require('./share');
-const { upsertBrand, upsertAd, getExistingMediaIds } = require('../supabase/adsRepository');
+const { upsertBrand, ensureMainPage, upsertAd, getExistingMediaIds } = require('../supabase/adsRepository');
 const { maxAds: MAX_ADS, filters: FILTER_CONFIG } = require('../config');
 
 const ACTION_TIMEOUT_MS = 15000;
@@ -183,9 +183,13 @@ async function collectAdsForBrand(context, page, brandName, maxAds = MAX_ADS) {
 
   const brandUrl = page.url();
   let brandId = null;
+  let mainPageId = null;
   try {
     brandId = await upsertBrand(brandName, brandUrl);
-    log('COLLECT', `Supabase brand ready: "${brandName}" (id=${brandId}).`);
+    // Every brand gets a `main` page and every ad is linked to it, so new
+    // brands don't need the one-time migration backfill.
+    mainPageId = await ensureMainPage(brandId, brandName);
+    log('COLLECT', `Supabase brand ready: "${brandName}" (id=${brandId}, mainPage=${mainPageId}).`);
   } catch (err) {
     warn('COLLECT', `Could not upsert brand "${brandName}" to Supabase; skipping DB writes for this run: ${err.message}`);
   }
@@ -254,7 +258,7 @@ async function collectAdsForBrand(context, page, brandName, maxAds = MAX_ADS) {
 
         if (brandId !== null) {
           try {
-            await upsertAd(result, brandId);
+            await upsertAd(result, brandId, mainPageId);
             dbSaved += 1;
             log('COLLECT', `  -> saved to Supabase (mediaId=${mediaId}).`);
           } catch (dbErr) {

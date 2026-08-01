@@ -37,6 +37,31 @@ async function upsertBrand(brandName, brandUrl = null) {
   return data.id;
 }
 
+/**
+ * Ensures a brand has a `main` page row and returns its id, so every ad the
+ * normal scraper collects can be linked to it via page_id. Idempotent: reuses
+ * the existing main page if there is one, inserts it otherwise. This replaces
+ * the one-time migration backfill for any brand created after that migration.
+ */
+async function ensureMainPage(brandId, brandName) {
+  const { data: existing, error: selErr } = await supabase
+    .from('pages')
+    .select('id')
+    .eq('brand_id', brandId)
+    .eq('type', 'main')
+    .maybeSingle();
+  if (selErr) throw new Error(`Failed to look up main page: ${selErr.message}`);
+  if (existing) return existing.id;
+
+  const { data, error } = await supabase
+    .from('pages')
+    .insert({ brand_id: brandId, name: brandName, type: 'main' })
+    .select('id')
+    .single();
+  if (error) throw new Error(`Failed to create main page for brand ${brandId}: ${error.message}`);
+  return data.id;
+}
+
 async function getExistingMediaIds(brandId) {
   const { data, error } = await supabase
     .from('ads')
@@ -76,4 +101,4 @@ async function upsertAd(ad, brandId, pageId = null) {
   }
 }
 
-module.exports = { upsertBrand, upsertAd, getExistingMediaIds };
+module.exports = { upsertBrand, ensureMainPage, upsertAd, getExistingMediaIds };
