@@ -42,6 +42,12 @@ const GENERATION_FLOW_ATTEMPTS = 3;
 const POLL_MS = 200;
 const STABLE_CHECKS_REQUIRED = 2;
 const GENERATE_BUTTON_NAME_PATTERN = /^generate transcri/i;
+// Text the panel shows that is NOT a real transcript: the "Generate
+// Transcription" button label (generation never actually started) and the
+// "Generating..." in-progress placeholder shown while the backend is still
+// transcribing a slow ad. Both must be treated as "not settled yet" so the
+// scraper waits for real content instead of saving the placeholder.
+const TRANSCRIPT_PLACEHOLDER_PATTERN = /^generat(e transcri|ing)/i;
 const TIMESTAMPS_TOGGLE_SELECTOR = 'label:has-text("Show timestamps") [role="switch"]';
 const TRANSCRIBE_API_PATTERN = /\/api\/ad-script\/transcribe(\?|$)/;
 
@@ -139,18 +145,22 @@ async function clickGenerateButtonWithRetry(button) {
  * across consecutive polls — the condition-based equivalent of "content
  * has finished rendering," since there's no Playwright event for that.
  */
-async function waitForTextToSettle(locator, timeoutMs = ACTION_TIMEOUT_MS) {
+async function waitForTextToSettle(locator, timeoutMs = ACTION_TIMEOUT_MS, placeholderPattern = null) {
   const deadline = Date.now() + timeoutMs;
   let lastText = null;
   let stableCount = 0;
 
   while (Date.now() < deadline) {
     const text = (await locator.innerText().catch(() => '')).trim();
-    if (text.length > 0 && text === lastText) {
+    // Placeholder text ("Generating...") is a transient loading state, not
+    // real content — treat it like empty so its stability never counts and
+    // we keep polling (up to timeoutMs) until the actual transcript renders.
+    const isReal = text.length > 0 && !(placeholderPattern && placeholderPattern.test(text));
+    if (isReal && text === lastText) {
       stableCount += 1;
       if (stableCount >= STABLE_CHECKS_REQUIRED) return text;
     } else {
-      stableCount = text.length > 0 ? 1 : 0;
+      stableCount = isReal ? 1 : 0;
     }
     lastText = text;
     await sleep(POLL_MS);
@@ -212,7 +222,7 @@ async function ensureTranscriptGenerated(statusWatcher, dialog, transcriptPanel)
       warn('PREPARE', '"Generate Transcription" button did not disappear within the timeout; continuing.');
     });
 
-    text = await waitForTextToSettle(transcriptPanel, GENERATION_SETTLE_TIMEOUT_MS);
+    text = await waitForTextToSettle(transcriptPanel, GENERATION_SETTLE_TIMEOUT_MS, TRANSCRIPT_PLACEHOLDER_PATTERN);
 
     const backendStatus = statusWatcher.getStatus();
     if (backendStatus === 'failed') {
@@ -223,7 +233,7 @@ async function ensureTranscriptGenerated(statusWatcher, dialog, transcriptPanel)
       throw new BackendTranscriptionFailedError(backendStatus);
     }
 
-    if (text && !GENERATE_BUTTON_NAME_PATTERN.test(text)) {
+    if (text && !TRANSCRIPT_PLACEHOLDER_PATTERN.test(text)) {
       log('PREPARE', 'Transcript generated and content has settled.');
       return { required: true, clicked: true, settledText: text };
     }
@@ -231,7 +241,8 @@ async function ensureTranscriptGenerated(statusWatcher, dialog, transcriptPanel)
     warn(
       'PREPARE',
       `Generation attempt ${attempt}/${GENERATION_FLOW_ATTEMPTS} did not produce real transcript content ` +
-        `(settled text was ${JSON.stringify(text)} — looks like the button's own label, not a transcript); ` +
+        `(settled text was ${JSON.stringify(text)} — still a placeholder ("Generate Transcription" or ` +
+        `"Generating..."), not a transcript); ` +
         (attempt < GENERATION_FLOW_ATTEMPTS ? 're-attempting.' : 'giving up.')
     );
   }
