@@ -257,7 +257,22 @@ async function ensureTranscriptGenerated(statusWatcher, dialog, transcriptPanel)
  */
 async function ensureTimestampsDisabled(dialog, transcriptPanel) {
   const toggle = dialog.locator(TIMESTAMPS_TOGGLE_SELECTOR);
-  await toggle.waitFor({ state: 'visible', timeout: ACTION_TIMEOUT_MS });
+  const toggleVisible = await toggle
+    .waitFor({ state: 'visible', timeout: 3000 })
+    .then(() => true)
+    .catch(() => false);
+
+  if (!toggleVisible) {
+    log('PREPARE', '"Show timestamps" toggle not found — extracting transcript as-is.');
+    return {
+      selector: TIMESTAMPS_TOGGLE_SELECTOR,
+      initialChecked: null,
+      finalChecked: null,
+      initiallyOn: false,
+      disabled: true,
+      actionTaken: false,
+    };
+  }
 
   const initialChecked = await toggle.getAttribute('aria-checked');
   const initiallyOn = initialChecked === 'true';

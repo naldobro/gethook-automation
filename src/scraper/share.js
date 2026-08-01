@@ -15,6 +15,9 @@
 const { log, error } = require('../browser/logger');
 
 const ACTION_TIMEOUT_MS = 15000;
+const CLIPBOARD_POLL_INTERVAL_MS = 150;
+const CLIPBOARD_POLL_TIMEOUT_MS = 5000;
+const CLIPBOARD_SENTINEL = '__GETHOOK_SHARE_PENDING__';
 
 // Selector confirmed by live DOM inspection: a native
 // <button aria-label="Share ad"> in the Details dialog toolbar. A real
@@ -57,18 +60,22 @@ async function captureShareUrl(context, page, dialog) {
   const shareButton = dialog.getByRole(SHARE_BUTTON_ROLE, { name: SHARE_BUTTON_NAME });
   await shareButton.waitFor({ state: 'visible', timeout: ACTION_TIMEOUT_MS });
 
-  log('SHARE', 'Clicking "Share ad" once...');
-  // force: true — confirmed live, a third-party Crisp support-chat widget
-  // (unrelated to the Details dialog) can render on top of this button
-  // and fail Playwright's actionability check ("intercepts pointer
-  // events") even though the button itself resolves correctly and is
-  // genuinely visible/enabled. This dispatches the click on the real,
-  // already-verified button element directly rather than working around
-  // the overlay's own markup.
-  await shareButton.click({ timeout: ACTION_TIMEOUT_MS, force: true });
+  await page.evaluate((s) => navigator.clipboard.writeText(s), CLIPBOARD_SENTINEL);
 
-  const clipboardText = await page.evaluate(() => navigator.clipboard.readText());
-  const clipboard = (clipboardText || '').trim();
+  log('SHARE', 'Clicking "Share ad" once...');
+  // Dispatch the click directly on the DOM element rather than at screen
+  // coordinates — a third-party Crisp support-chat widget can overlay
+  // the button and intercept coordinate-based clicks even with force:true.
+  await shareButton.evaluate((el) => el.click());
+
+  const deadline = Date.now() + CLIPBOARD_POLL_TIMEOUT_MS;
+  let clipboard = '';
+  while (Date.now() < deadline) {
+    const raw = await page.evaluate(() => navigator.clipboard.readText());
+    clipboard = (raw || '').trim();
+    if (clipboard && clipboard !== CLIPBOARD_SENTINEL) break;
+    await new Promise((r) => setTimeout(r, CLIPBOARD_POLL_INTERVAL_MS));
+  }
 
   const nonEmpty = clipboard.length > 0;
   const isUrl = nonEmpty && isValidHttpUrl(clipboard);
