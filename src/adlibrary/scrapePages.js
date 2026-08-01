@@ -84,6 +84,11 @@ async function searchAndOpenPage(page, pageName) {
   const tab = page.getByRole('tab', { name: 'Brands', exact: true });
   const searchBox = page.getByRole('combobox', { name: 'Search brands', exact: true });
 
+  // Return to the Explore screen first: after scraping a page we're on its
+  // /brands/{id} detail view, which has no "Brands" tab to click.
+  await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded' }).catch(() => {});
+  await page.waitForLoadState('load', { timeout: LOAD_EVENT_TIMEOUT_MS }).catch(() => {});
+
   await tab.waitFor({ state: 'visible', timeout: T });
   for (let a = 0; a < 3; a++) {
     await tab.click({ timeout: T }).catch(() => {});
