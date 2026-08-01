@@ -10,10 +10,11 @@
  */
 
 module.exports = {
-  maxAds: 100,
+  maxAds: 50,
 
   filters: {
-    country: 'US',
+    // Empty = no constraint on that dimension (see src/scraper/filters.js).
+    country: '',
     language: 'en',
     format: 'video',
   },

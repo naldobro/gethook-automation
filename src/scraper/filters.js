@@ -33,15 +33,28 @@ const ACTION_TIMEOUT_MS = 15000;
 async function applyBrandFilters(page) {
   const beforeUrl = page.url();
   const url = new URL(beforeUrl);
-  url.searchParams.set('location', filters.country);
-  url.searchParams.set('languages', filters.language);
-  url.searchParams.set('display_formats', filters.format);
+
+  // Each filter is optional: an empty/unset config value means "don't
+  // constrain on this dimension." Actively delete the param in that case so
+  // a value already present on the brand URL (e.g. location=US carried over
+  // from navigation) doesn't silently keep filtering.
+  const paramForFilter = [
+    ['location', filters.country, 'Country'],
+    ['languages', filters.language, 'Language'],
+    ['display_formats', filters.format, 'Ad format'],
+  ];
+  const applied = [];
+  for (const [param, value, label] of paramForFilter) {
+    if (value) {
+      url.searchParams.set(param, value);
+      applied.push(`${label}=${value}`);
+    } else {
+      url.searchParams.delete(param);
+    }
+  }
   const requestedUrl = url.toString();
 
-  log(
-    'FILTERS',
-    `Applying filters: Country=${filters.country}, Language=${filters.language}, Ad format=${filters.format}`
-  );
+  log('FILTERS', `Applying filters: ${applied.length ? applied.join(', ') : '(none)'}`);
   log('FILTERS', `Navigating to filtered URL: ${requestedUrl}`);
   await page.goto(requestedUrl, { waitUntil: 'domcontentloaded' });
 
