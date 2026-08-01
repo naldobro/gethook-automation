@@ -105,7 +105,7 @@ Query Supabase for the brand's ads, run analysis, then:
 
 **Pilot brand:** RYZE.
 
-**Verified/open:** GetHook DOES cover at least some creator/whitelist pages (user spot-checked one RYZE creator page — searchable in GetHook); needs testing at scale. Confirm Meta Ad Library's landing-page/domain search behaviour when building Layer A.
+**GetHook coverage of discovered pages: PARTIAL (tested 2026-08-01 on ryze's 12 finds).** ~5/7 sampled pages exist in GetHook (Popsugar, FailArmy, Shroomcoffeeshop, The Berardo Productions = clean matches; Jordan Staten = ambiguous — many "Jordan" pages; Mushroomcoffeecorner, Drinkmushrooms = NOT in GetHook). So Layer B can collect ads for GetHook-covered pages but not all; uncovered pages stay recorded-but-unscraped (Ad Library ad-collection deferred per user). GetHook search returns multiple results — Layer B needs a disambiguation rule, not "click first result." Ad Library landing-page/domain search is confirmed working (Layer A).
 
 **Boundary (strict):** the scraper only COLLECTS reliably and fast and stores. All clustering/scoring/conviction/trend logic lives in the separate analysis body — never in the scraper.
 
