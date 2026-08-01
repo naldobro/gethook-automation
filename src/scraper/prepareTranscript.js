@@ -204,8 +204,30 @@ async function ensureTranscriptGenerated(statusWatcher, dialog, transcriptPanel)
     .catch(() => false);
 
   if (!present) {
-    log('PREPARE', '"Generate Transcription" button not present — transcript already exists.');
-    const text = (await transcriptPanel.innerText().catch(() => '')).trim();
+    log(
+      'PREPARE',
+      '"Generate Transcription" button not present — transcript already exists or is still generating.'
+    );
+    // A missing button does NOT guarantee real content: the panel can still
+    // be showing the "Generating..." placeholder (backend transcription in
+    // progress) with no button left to click. Settle on real content the
+    // same way the generation path does — rejecting placeholder text — so we
+    // never capture "Generating..."/"Generate Transcription" as a transcript.
+    const text = await waitForTextToSettle(
+      transcriptPanel,
+      GENERATION_SETTLE_TIMEOUT_MS,
+      TRANSCRIPT_PLACEHOLDER_PATTERN
+    );
+    if (statusWatcher.getStatus() === 'failed') {
+      log('PREPARE', `GetHook's backend reported transcription_status="failed" for this ad.`);
+      throw new BackendTranscriptionFailedError('failed');
+    }
+    if (!text || TRANSCRIPT_PLACEHOLDER_PATTERN.test(text)) {
+      throw new Error(
+        `Transcript panel showed placeholder text with no "Generate Transcription" button ` +
+          `after ${GENERATION_SETTLE_TIMEOUT_MS}ms (last settled: ${JSON.stringify(text)}).`
+      );
+    }
     return { required: false, clicked: false, settledText: text };
   }
 
