@@ -50,22 +50,26 @@ async function getExistingMediaIds(brandId) {
   return data.map((row) => row.media_id);
 }
 
-async function upsertAd(ad, brandId) {
-  const { error } = await supabase.from('ads').upsert(
-    {
-      media_id: ad.mediaId,
-      brand_id: brandId,
-      saved_date: ad.savedDate,
-      active_period: ad.activePeriod,
-      landing_page: ad.landingPage,
-      title: ad.title,
-      duration: ad.duration,
-      transcript: ad.transcript,
-      share_url: ad.shareUrl,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'media_id' }
-  );
+async function upsertAd(ad, brandId, pageId = null) {
+  const row = {
+    media_id: ad.mediaId,
+    brand_id: brandId,
+    saved_date: ad.savedDate,
+    active_period: ad.activePeriod,
+    landing_page: ad.landingPage,
+    title: ad.title,
+    duration: ad.duration,
+    transcript: ad.transcript,
+    share_url: ad.shareUrl,
+    updated_at: new Date().toISOString(),
+  };
+  // Only touch page_id when a caller supplies it (Layer B files whitelist
+  // ads under the real brand + the 3rd-party page). Omitting it leaves any
+  // existing page_id untouched on re-scrape, so the normal scraper's
+  // two-arg call is unaffected.
+  if (pageId != null) row.page_id = pageId;
+
+  const { error } = await supabase.from('ads').upsert(row, { onConflict: 'media_id' });
 
   if (error) {
     throw new Error(`Failed to upsert ad mediaId=${ad.mediaId}: ${error.message}`);

@@ -53,6 +53,18 @@ async function getExistingPageNames(brandId) {
   return new Set((data || []).map((p) => p.name.toLowerCase()));
 }
 
+/** A brand's discovered pages (whitelist/secondary — i.e. not the main page). */
+async function getDiscoveredPages(brandId) {
+  const { data, error } = await supabase
+    .from('pages')
+    .select('id, name, type')
+    .eq('brand_id', brandId)
+    .neq('type', 'main')
+    .order('type');
+  if (error) throw new Error(`Failed to query pages: ${error.message}`);
+  return data || [];
+}
+
 /** Insert one discovered page. Assumes the caller already deduped by name. */
 async function insertPage(brandId, name, type, foundViaDomain) {
   const { error } = await supabase
@@ -61,4 +73,11 @@ async function insertPage(brandId, name, type, foundViaDomain) {
   if (error) throw new Error(`Failed to insert page "${name}": ${error.message}`);
 }
 
-module.exports = { findBrands, getBrandLanderDomains, getExistingPageNames, insertPage, toDomain };
+module.exports = {
+  findBrands,
+  getBrandLanderDomains,
+  getExistingPageNames,
+  getDiscoveredPages,
+  insertPage,
+  toDomain,
+};
