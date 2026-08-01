@@ -258,6 +258,14 @@ async function main() {
   const results = [];
   for (const p of pages) {
     log('LAYERB', `── Page: "${p.name}" (${p.type}, page_id=${p.id}) ──`);
+    // Guard against reversed branded-content labels like "<Brand> with Creator":
+    // stripping " with …" leaves the brand name, which would open (and
+    // re-scrape) the MAIN brand and misfile its ads under this page_id.
+    if (norm(searchTermFor(p.name)) === norm(brand.name)) {
+      log('LAYERB', '  skipped — name resolves to the main brand itself, not a distinct page.');
+      results.push({ page: p.name, skipped: 'resolves to main brand' });
+      continue;
+    }
     const open = await searchAndOpenPage(page, p.name);
     if (!open.opened) { log('LAYERB', `  skipped — ${open.reason}.`); results.push({ page: p.name, skipped: open.reason }); continue; }
     await applyBrandFilters(page);
