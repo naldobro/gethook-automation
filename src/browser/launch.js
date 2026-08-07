@@ -20,9 +20,14 @@
  *   --inspect         Keep the browser open (waiting for Enter) after the
  *                      run finishes, instead of closing automatically.
  *                      Normal runs close and exit without any pause.
+ *   --url=<brandUrl>  Skip the Brands search and go straight to this brand
+ *                      detail URL (.../brands/{id}). Use when GetHook's
+ *                      typeahead fails to surface a brand that exists.
+ *                      brandName is still required/used for storage & export.
  *
  * Usage:
  *   node src/browser/launch.js [brandName] [--inspect] [--reset-profile]
+ *   node src/browser/launch.js "AuraMalibu" --url=https://app.gethookd.ai/brands/4373083
  *
  *   brandName defaults to config.DEFAULT_BRAND_NAME when omitted.
  */
@@ -38,7 +43,7 @@ const {
 } = require('./profileManager');
 const { ensureLoggedIn } = require('./session');
 const { askQuestion } = require('./prompt');
-const { navigateToBrand } = require('../scraper/navigation');
+const { navigateToBrand, navigateToBrandByUrl } = require('../scraper/navigation');
 const { collectAdsForBrand } = require('../scraper/collect');
 const { applyBrandFilters } = require('../scraper/filters');
 const { exportAdsToJson } = require('../export/json');
@@ -48,7 +53,9 @@ const { exportAdsToJson } = require('../export/json');
 const { maxAds, filters: filterConfig } = require('../config');
 
 // Separates "--flag"-style switches from the positional brand name
-// argument, so they can appear in any order on the command line.
+// argument, so they can appear in any order on the command line. Flags may
+// be bare ("--inspect") or carry a value ("--url=https://..."); the value is
+// kept with the flag string and pulled out later via getFlagValue.
 function parseArgs(argv) {
   const flags = new Set();
   const positional = [];
@@ -62,9 +69,23 @@ function parseArgs(argv) {
   return { flags, positional };
 }
 
+// Returns the value of a "--name=value" flag, or null if absent.
+function getFlagValue(flags, name) {
+  for (const flag of flags) {
+    if (flag.startsWith(`${name}=`)) return flag.slice(name.length + 1);
+  }
+  return null;
+}
+
 const { flags, positional } = parseArgs(process.argv.slice(2));
 const brandName = positional[0] || DEFAULT_BRAND_NAME;
 const inspectMode = flags.has('--inspect');
+// Optional direct brand URL. When present, skip the Brands search entirely
+// and navigate straight to this page — used when GetHook's typeahead fails to
+// surface a brand that exists (see navigateToBrandByUrl). brandName is still
+// required/used for storage, export, and Supabase; the URL only changes HOW
+// we reach the brand page, not what it's filed under.
+const brandUrl = getFlagValue(flags, '--url');
 
 // Module-level so the SIGINT handler can reach it for a graceful shutdown.
 let context;
@@ -141,7 +162,12 @@ async function main() {
   await ensureLoggedIn(page);
 
   log('BRAND', `Using brand: "${brandName}"`);
-  await navigateToBrand(page, brandName);
+  if (brandUrl) {
+    log('BRAND', `Direct URL provided — skipping Brands search: ${brandUrl}`);
+    await navigateToBrandByUrl(page, brandUrl);
+  } else {
+    await navigateToBrand(page, brandName);
+  }
 
   const filterResult = await applyBrandFilters(page);
   log('BRAND', `Filters applied — ad card visible after refresh: ${filterResult.refreshed}`);

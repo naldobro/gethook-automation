@@ -14,7 +14,7 @@ module.exports = {
 
   filters: {
     // Empty = no constraint on that dimension (see src/scraper/filters.js).
-    country: '',
+    country: 'US',
     language: 'en',
     format: 'video',
   },

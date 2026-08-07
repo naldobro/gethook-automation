@@ -221,27 +221,112 @@ async function waitForSearchResults(page, brandName) {
 }
 
 /**
- * Click the first matching brand result and wait for the resulting brand
- * detail page to load.
+ * Normalize a brand label for comparison: lowercase, collapse internal
+ * whitespace, trim. Deliberately does NOT strip accents so "Frøya" only
+ * matches "Frøya", never a differently-spelled brand.
+ */
+function normalizeName(s) {
+  return (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Click the search result whose NAME matches the brand we searched for,
+ * then wait for the resulting brand detail page to load.
  *
- * Selector: options.first(), i.e. the first role="option" row inside the
- * results listbox — GetHook orders results by relevance, so the first row
- * is the intended "first matching brand." Clicking it triggers a
- * client-side route to /brands/{id}, confirmed via waitForURL rather than
- * a load-state wait, since (as above) this app doesn't reliably fire full
- * navigation/network-idle events on client-side routing.
+ * Why not simply options.first(): GetHook's results are grouped, and a
+ * "YOUR BRANDS" (already-spied) entry can be listed above the brand you
+ * actually searched for. Observed live: searching "Frøya Organics" returns
+ * "Norse Organics" (YOUR BRANDS) as the first option and "Frøya Organics"
+ * (DISCOVER BRANDS) second — clicking the first row would scrape the wrong
+ * brand entirely. So we read each option's name (the first line of its
+ * text) and pick the closest match to `brandName`:
+ *   1. exact normalized name equality,
+ *   2. else an option whose name contains the query (or vice-versa),
+ *   3. else fall back to the first option (with a warning) so an
+ *      approximate-but-unambiguous search like "ryze" still works.
+ *
+ * Clicking triggers a client-side route to /brands/{id}, confirmed via
+ * waitForURL rather than a load-state wait, since (as above) this app
+ * doesn't reliably fire full navigation/network-idle events on client-side
+ * routing.
  */
 async function clickFirstResult(page, options, brandName) {
-  const first = options.first();
-  const label = (await first.innerText().catch(() => '')).split('\n')[0] || brandName;
-  log('NAV', `Clicking first matching brand: "${label}"...`);
+  const count = await options.count();
+  const target = normalizeName(brandName);
 
-  await withRetries('Click first brand result', async () => {
-    await first.click({ timeout: ACTION_TIMEOUT_MS });
+  const labels = [];
+  for (let i = 0; i < count; i++) {
+    const text = await options.nth(i).innerText().catch(() => '');
+    labels.push(normalizeName(text.split('\n')[0]));
+  }
+
+  let chosenIndex = labels.findIndex((name) => name === target);
+  if (chosenIndex === -1) {
+    chosenIndex = labels.findIndex(
+      (name) => name && (name.includes(target) || target.includes(name))
+    );
+  }
+  if (chosenIndex === -1) {
+    warn(
+      'NAV',
+      `No result name matched "${brandName}" among [${labels.join(' | ')}]; ` +
+        'falling back to the first result.'
+    );
+    chosenIndex = 0;
+  } else if (chosenIndex !== 0) {
+    log(
+      'NAV',
+      `Skipping earlier result(s) [${labels.slice(0, chosenIndex).join(' | ')}] ` +
+        `to click the name-matched brand at position ${chosenIndex + 1}.`
+    );
+  }
+
+  const chosen = options.nth(chosenIndex);
+  const label = labels[chosenIndex] || brandName;
+  log('NAV', `Clicking matching brand: "${label}"...`);
+
+  await withRetries('Click brand result', async () => {
+    await chosen.click({ timeout: ACTION_TIMEOUT_MS });
   });
 
   await page.waitForURL(/\/brands\/\d+/, { timeout: ACTION_TIMEOUT_MS });
   log('NAV', `Navigated to brand page: ${page.url()}`);
+}
+
+/**
+ * Direct-URL alternative to navigateToBrand: skip the Brands search entirely
+ * and go straight to a brand's detail page by its URL.
+ *
+ * Why this exists: GetHook's search typeahead intermittently fails to surface
+ * a brand that unquestionably exists (observed with "AuraMalibu" — the
+ * dropdown returned "No brands found" while the brand list table below it
+ * showed the brand with 3,370 saved ads). When that happens there is no
+ * dropdown option to click, so navigateToBrand can't reach the brand at all.
+ * Pasting the brand's own /brands/{id} URL sidesteps the broken typeahead:
+ * the destination is identical to what clicking the result would have loaded.
+ *
+ * This does NOT bypass any real work — applyBrandFilters (the next step) is
+ * already fully URL-driven and layers its filter params onto whatever brand
+ * URL we land on, so a direct navigation here feeds it exactly what a search
+ * click would have. Assumes the session is already authenticated (launch.js
+ * runs ensureLoggedIn before navigation), so the goto lands on the brand page
+ * rather than being bounced to login.
+ */
+async function navigateToBrandByUrl(page, brandUrl) {
+  if (!brandUrl || !brandUrl.trim()) {
+    throw new Error('navigateToBrandByUrl requires a non-empty URL.');
+  }
+  if (!/\/brands\/\d+/.test(brandUrl)) {
+    throw new Error(
+      `"${brandUrl}" does not look like a GetHook brand URL (expected .../brands/{id}).`
+    );
+  }
+
+  log('NAV', `Direct navigation to brand URL: ${brandUrl}`);
+  await page.goto(brandUrl, { waitUntil: 'domcontentloaded' });
+  await page.waitForURL(/\/brands\/\d+/, { timeout: ACTION_TIMEOUT_MS });
+  log('NAV', `On brand page: ${page.url()}`);
+  return page;
 }
 
 /**
@@ -265,4 +350,4 @@ async function navigateToBrand(page, brandName) {
   return page;
 }
 
-module.exports = { navigateToBrand };
+module.exports = { navigateToBrand, navigateToBrandByUrl };
