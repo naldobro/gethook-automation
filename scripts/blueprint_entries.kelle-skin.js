@@ -37,8 +37,8 @@ function titleToId(t) {
   return null; // unrecognised title -> skip
 }
 
-const sortKey = (t) => {
-  const m = (t || '').match(/(?:batch#?|cyperus rotundus_#)\s*([\d.]+)/i);
+const sortKey = (r) => {
+  const m = (r.title || '').match(/(?:batch#?|cyperus rotundus_#)\s*([\d.]+)/i);
   return m ? parseFloat(m[1]) : 9999;
 };
 

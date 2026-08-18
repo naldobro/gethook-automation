@@ -77,20 +77,28 @@ async function main() {
   const cfg = loadConfig(slug);
   const entries = cfg.entries;
   const dupTitles = new Set(cfg.dupTitles || []);
-  const titleToId = cfg.titleToId || ((t) => (dupTitles.has(t) ? null : t));
-  const sortKey = cfg.sortKey || ((t) => t);
+  // sortKey / rowToId receive the FULL ad row {id, media_id, title, tx}.
+  // Default order = row `id` ascending = scrape/insert order = GetHook impressions
+  // order, so idPrefix IDs (PV#1..) rank by spend/priority (PV#1 = top ad).
+  const sortKey = cfg.sortKey || ((r) => (Number(r.id) || 0));
+  const rowToId = cfg.rowToId || (cfg.titleToId ? (r) => cfg.titleToId(r.title) : (r) => (dupTitles.has(r.title) ? null : r.title));
   console.log(`Brand: "${brand.name}" (id=${brand.id}) · config: blueprint_entries.${slug}.js`);
 
-  const { data, error } = await supabase.from('ads').select('title,transcript').eq('brand_id', brand.id);
+  const { data, error } = await supabase.from('ads').select('id,media_id,title,transcript').eq('brand_id', brand.id);
   if (error) { console.error(error); process.exit(1); }
-  const arr = data
+  let arr = data
     .filter((r) => !dupTitles.has(r.title))
-    .map((r) => ({ id: titleToId(r.title), title: r.title, tx: r.transcript || '' }))
-    .filter((r) => r.id)
-    .sort((a, b) => {
-      const ka = sortKey(a.title), kb = sortKey(b.title);
-      return ka < kb ? -1 : ka > kb ? 1 : a.title.localeCompare(b.title);
-    });
+    .map((r) => ({ id: r.id, media_id: String(r.media_id), title: r.title, tx: r.transcript || '' }));
+  if (cfg.idPrefix) {
+    // brands with no batch numbering: stable sequential IDs by sortKey (default media_id)
+    arr.sort((a, b) => { const ka = sortKey(a), kb = sortKey(b); return ka < kb ? -1 : ka > kb ? 1 : 0; });
+    arr.forEach((r, i) => { r.id = cfg.idPrefix + (i + 1); });
+  } else {
+    arr = arr
+      .map((r) => ({ ...r, id: rowToId(r) }))
+      .filter((r) => r.id)
+      .sort((a, b) => { const ka = sortKey(a), kb = sortKey(b); return ka < kb ? -1 : ka > kb ? 1 : String(a.title).localeCompare(String(b.title)); });
+  }
   const order = arr.map((r) => r.id);
   const tx = Object.fromEntries(arr.map((r) => [r.id, r.tx]));
 
@@ -120,7 +128,14 @@ async function main() {
   const seen = new Map(); const deduped = [];
   for (const r of rows) {
     const key = r.layer + '|' + r.element;
-    if (seen.has(key)) { const prev = seen.get(key); if (r.note && !prev.note.includes(r.note)) prev.note = [prev.note, r.note].filter(Boolean).join(' / '); continue; }
+    if (seen.has(key)) {
+      const prev = seen.get(key);
+      // same (layer, element) → merge ids (union), don't drop coverage
+      const union = [...new Set([...prev.ids.split(', ').filter(Boolean), ...r.ids.split(', ').filter(Boolean)])];
+      prev.ids = union.join(', '); prev.n = union.length;
+      if (r.note && !prev.note.includes(r.note)) prev.note = [prev.note, r.note].filter(Boolean).join(' / ');
+      continue;
+    }
     seen.set(key, r); deduped.push(r);
   }
   rows.length = 0; rows.push(...deduped);

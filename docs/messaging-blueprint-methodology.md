@@ -55,7 +55,12 @@ Do **not** hand-type a CSV (retyping corrupts copy). Instead:
 - `verbatim` = `yes` (exact text) or `label` (angle/persona).
 
 ### Script ID scheme
-Derive a stable ID per script from its title: `Batch#22 → B#22`, `Cyperus Rotundus_#2.5 → CR#2.5`. Disambiguate collisions (two `#14`s) with a suffix (`B#14-WD`). Oddball titles get short names. Generic social domains are never brand landers.
+Two modes:
+- **Title-derived** (batch-numbered brands, e.g. Kelle): config `titleToId(title)` → `Batch#22 → B#22`, `Cyperus Rotundus_#2.5 → CR#2.5`; disambiguate collisions with a suffix (`B#14-WD`).
+- **`idPrefix`** (brands with editorial/duplicate/null titles, e.g. Primal Viking): the builder assigns sequential IDs `PREFIX1..N` sorted by `sortKey` (default = row `id` = **scrape order = GetHook impressions order**), so **PV#1 = the top-spend/priority ad** and the number encodes weightage.
+
+### Look up an ad by ID
+`node scripts/blueprint_lookup.js --brand "<Brand>" PV#42` resolves any numbered ID back to its GetHook **share URL** + title/landing/active-period (same ordering as the builder). `--list` shows the top ads by priority.
 
 ---
 
