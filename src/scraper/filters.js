@@ -42,6 +42,12 @@ async function applyBrandFilters(page) {
     ['location', filters.country, 'Country'],
     ['languages', filters.language, 'Language'],
     ['display_formats', filters.format, 'Ad format'],
+    // Sort order. Empty leaves GetHook's default sort ("Most impressions"), so
+    // no param is set and the list already comes back impressions-first. The
+    // exact param name/value for forcing a non-default sort is still to be
+    // confirmed from a live URL; until then only the default (empty) path is
+    // exercised. The guard below deletes any stale 'sort' param when empty.
+    ['sort', filters.sort, 'Sort'],
   ];
   const applied = [];
   for (const [param, value, label] of paramForFilter) {

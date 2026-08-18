@@ -21,6 +21,19 @@ async function findBrands(name) {
   return data || [];
 }
 
+/**
+ * Generic social / platform domains that are never a brand-owned lander.
+ * Ads occasionally point at these (e.g. an Instagram profile link), but
+ * pivoting Ad Library on them would surface every advertiser on the platform
+ * — pure noise — so they're excluded from the domain pivot set.
+ */
+const GENERIC_DOMAINS = new Set([
+  'instagram.com', 'facebook.com', 'fb.com', 'fb.me', 'm.me',
+  'youtube.com', 'youtu.be', 'tiktok.com', 'twitter.com', 'x.com',
+  'linkedin.com', 'pinterest.com', 'snapchat.com', 'threads.net',
+  'linktr.ee', 't.me', 'wa.me', 'whatsapp.com', 'reddit.com',
+]);
+
 /** Normalize a landing_page value to a bare hostname (drops scheme/path/www). */
 function toDomain(url) {
   if (!url) return null;
@@ -28,7 +41,9 @@ function toDomain(url) {
   if (!s || s.toLowerCase() === 'n/a') return null;
   if (!/^https?:\/\//i.test(s)) s = 'https://' + s;
   try {
-    return new URL(s).hostname.replace(/^www\./i, '').toLowerCase();
+    const host = new URL(s).hostname.replace(/^www\./i, '').toLowerCase();
+    if (GENERIC_DOMAINS.has(host)) return null;
+    return host;
   } catch {
     return null;
   }

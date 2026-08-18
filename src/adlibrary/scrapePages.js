@@ -33,9 +33,10 @@ const { applyBrandFilters } = require('../scraper/filters');
 const { prepareTranscript, BackendTranscriptionFailedError } = require('../scraper/prepareTranscript');
 const { extractTranscript } = require('../scraper/extract');
 const { captureShareUrl } = require('../scraper/share');
-const { closeAdDetails } = require('../scraper/details');
+const { openAdDetails, closeAdDetails } = require('../scraper/details');
+const { extractOverviewFields } = require('../scraper/overview');
 const { upsertAd, getExistingMediaIds } = require('../supabase/adsRepository');
-const { findBrands, getDiscoveredPages } = require('./pagesRepository');
+const { findBrands, getDiscoveredPages, getBrandLanderDomains } = require('./pagesRepository');
 
 const T = 15000;
 const MAX_SCROLL_ROUNDS = 500;
@@ -182,32 +183,81 @@ async function processOneAd(context, page, card, mediaId, summary) {
   };
 }
 
-/** Collect the currently-open page's ads and file them under (brandId, pageId). */
-async function collectPageAds(context, page, brandId, pageId, seenIds, maxAds) {
+/** Bare hostname of a landing page, or null. */
+function hostOf(url) {
+  try { return new URL(url).hostname.replace(/^www\./i, '').toLowerCase(); } catch { return null; }
+}
+
+/**
+ * Cheaply read ONLY an ad's landing-page host by opening Details and reading
+ * the Overview — WITHOUT opening the transcript tab (the slow part). Lets a
+ * multi-brand creator page skip off-brand ads before paying for a transcript.
+ * Returns null if it can't read one, so the caller falls back to full processing.
+ */
+async function peekLanderHost(page, card) {
+  try {
+    const dialog = await openAdDetails(page, card);
+    const overview = await extractOverviewFields(page, dialog);
+    await closeAdDetails(page, dialog);
+    return hostOf(overview.landingPage);
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Collect the currently-open page's ads and file them under (brandId, pageId).
+ * `allowedDomains` (the brand's own lander domains) is the safety net for
+ * multi-brand creator/whitelist pages: a creator like "Maggie Jones" runs ads
+ * for several brands off one GetHook page, so we only SAVE the ads whose
+ * landing page points at this brand's domain and skip the rest. `maxAds` caps
+ * how many of the page's ads we EXAMINE (not how many we save).
+ */
+async function collectPageAds(context, page, brandId, pageId, seenIds, maxAds, allowedDomains) {
   const cards = page.getByTestId('ad-card');
   const appeared = await cards.first().waitFor({ state: 'visible', timeout: T }).then(() => true).catch(() => false);
-  if (!appeared) { warn('LAYERB', '  no ad cards for this page — nothing to collect.'); return { saved: 0, errors: 0, backendFailures: 0 }; }
+  if (!appeared) { warn('LAYERB', '  no ad cards for this page — nothing to collect.'); return { saved: 0, filtered: 0, errors: 0, backendFailures: 0 }; }
 
-  let saved = 0, errors = 0, backendFailures = 0, collectedHere = 0;
+  const filterOn = allowedDomains && allowedDomains.size > 0;
+  let saved = 0, filtered = 0, errors = 0, backendFailures = 0, examined = 0;
 
-  for (let round = 0; round < MAX_SCROLL_ROUNDS && collectedHere < maxAds; round++) {
+  for (let round = 0; round < MAX_SCROLL_ROUNDS && examined < maxAds; round++) {
     const count = await cards.count().catch(() => 0);
     let newThisRound = 0;
 
-    for (let i = 0; i < count && collectedHere < maxAds; i++) {
+    for (let i = 0; i < count && examined < maxAds; i++) {
       const card = cards.nth(i);
       const mediaId = await extractMediaId(card);
       if (!mediaId || seenIds.has(mediaId)) continue;
       seenIds.add(mediaId);
-      newThisRound++;
+      newThisRound++; examined++;
 
       const summary = await extractCardSummary(card);
-      log('LAYERB', `  ad ${collectedHere + 1}/${maxAds}: mediaId=${mediaId} "${summary.title}"`);
+      log('LAYERB', `  ad ${examined}/${maxAds}: mediaId=${mediaId} "${summary.title}"`);
+
+      // Cheap pre-check: peek at the landing page BEFORE the transcript wait, so
+      // an off-brand ad on a multi-brand creator page is skipped fast. If the
+      // peek can't read a host, fall through — the post-process check still guards.
+      if (filterOn) {
+        const peekHost = await peekLanderHost(page, card);
+        if (peekHost && !allowedDomains.has(peekHost)) {
+          filtered++;
+          log('LAYERB', `    -> filtered out (off-brand: ${peekHost}) — skipped before transcript.`);
+          continue;
+        }
+      }
+
       try {
         const ad = await processOneAd(context, page, card, mediaId, summary);
+        const host = hostOf(ad.landingPage);
+        if (filterOn && !allowedDomains.has(host)) {
+          filtered++;
+          log('LAYERB', `    -> filtered out (off-brand lander: ${host || 'none'}).`);
+          continue;
+        }
         await upsertAd(ad, brandId, pageId);
-        saved++; collectedHere++;
-        log('LAYERB', `    -> saved (transcript ${ad.transcript.length} chars).`);
+        saved++;
+        log('LAYERB', `    -> saved (transcript ${ad.transcript.length} chars, lander ${host}).`);
       } catch (err) {
         if (err instanceof BackendTranscriptionFailedError) { backendFailures++; warn('LAYERB', `    -> skipped (backend transcription failed).`); }
         else { errors++; error('LAYERB', `    -> failed: ${err.message}`); }
@@ -215,11 +265,11 @@ async function collectPageAds(context, page, brandId, pageId, seenIds, maxAds) {
       }
     }
 
-    if (collectedHere >= maxAds) break;
+    if (examined >= maxAds) break;
     const grew = await scrollForMore(page);
     if (!grew && newThisRound === 0) { log('LAYERB', '  reached end of this page\'s ads.'); break; }
   }
-  return { saved, errors, backendFailures };
+  return { saved, filtered, errors, backendFailures };
 }
 
 let context;
@@ -239,6 +289,11 @@ async function main() {
   const brands = await findBrands(brandQuery);
   if (brands.length === 0) { error('LAYERB', `No brand matching "${brandQuery}".`); process.exit(1); }
   const brand = brands[0];
+
+  // Only save ads whose landing page points at one of the brand's own domains —
+  // the guard for multi-brand creator/whitelist pages (see collectPageAds).
+  const allowedDomains = new Set(await getBrandLanderDomains(brand.id));
+  log('LAYERB', `Domain filter: keeping only ads landing on [${[...allowedDomains].join(', ') || '(any — no known landers)'}].`);
 
   let pages = await getDiscoveredPages(brand.id);
   if (onlyPage) pages = pages.filter((p) => norm(p.name).includes(norm(onlyPage)));
@@ -269,16 +324,16 @@ async function main() {
     const open = await searchAndOpenPage(page, p.name);
     if (!open.opened) { log('LAYERB', `  skipped — ${open.reason}.`); results.push({ page: p.name, skipped: open.reason }); continue; }
     await applyBrandFilters(page);
-    const r = await collectPageAds(context, page, brand.id, p.id, seenIds, maxAds);
+    const r = await collectPageAds(context, page, brand.id, p.id, seenIds, maxAds, allowedDomains);
     results.push({ page: p.name, ...r });
-    log('LAYERB', `  "${p.name}": saved=${r.saved}, errors=${r.errors}, backendFailures=${r.backendFailures}`);
+    log('LAYERB', `  "${p.name}": saved=${r.saved}, filtered(off-brand)=${r.filtered}, errors=${r.errors}, backendFailures=${r.backendFailures}`);
   }
 
   console.log('\n----- LAYER B SUMMARY -----');
   console.log(`Brand: ${brand.name} (id=${brand.id})`);
   for (const r of results) {
     if (r.skipped) console.log(`  [skip] ${r.page} — ${r.skipped}`);
-    else console.log(`  [ok]   ${r.page} — saved ${r.saved} (errors ${r.errors}, backend-fail ${r.backendFailures})`);
+    else console.log(`  [ok]   ${r.page} — saved ${r.saved}, filtered ${r.filtered || 0} off-brand (errors ${r.errors}, backend-fail ${r.backendFailures})`);
   }
   const totalSaved = results.reduce((s, r) => s + (r.saved || 0), 0);
   console.log(`Total ads saved: ${totalSaved}`);

@@ -128,9 +128,10 @@ async function launchBrowser() {
 async function main() {
   console.log('Loaded configuration:');
   console.log(`  maxAds:   ${maxAds}`);
-  console.log(`  country:  ${filterConfig.country}`);
-  console.log(`  language: ${filterConfig.language}`);
+  console.log(`  country:  ${filterConfig.country || '(none)'}`);
+  console.log(`  language: ${filterConfig.language || '(none)'}`);
   console.log(`  format:   ${filterConfig.format}`);
+  console.log(`  sort:     ${filterConfig.sort || '(default: most impressions)'}`);
 
   await launchBrowser();
 
