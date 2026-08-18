@@ -39,7 +39,8 @@ The brand's ads must already be in Supabase (`ads` rows under its `brand_id`) **
 
 Do **not** hand-type a CSV (retyping corrupts copy). Instead:
 
-- **Source of truth = an entries file** (`scripts/blueprint_entries.js`): one JS object per element — `{ids, layer, start, end?, v, manual?, allMatch?, note?}`.
+- **Per-brand config = `scripts/blueprint_entries.<brand-slug>.js`** (slug = brand name lowercased, non-alphanumerics → `-`; e.g. `Kelle Skin → kelle-skin`). Exports `{ brandName?, dupTitles?, titleToId?, sortKey?, entries }`. The builder resolves `brand_id` from `--brand` against Supabase and loads this config by slug. Kelle Skin (`blueprint_entries.kelle-skin.js`) is the reference — copy it to start a new brand.
+- **Source of truth = the `entries` array**: one JS object per element — `{ids, layer, start, end?, v, manual?, allMatch?, note?}`.
   - `v:true` = verbatim: `start` (and optional `end`) are short **anchors**; the builder extracts the exact transcript slice between them. You only type short anchors to *locate* the block — the stored text comes straight from the DB, so wording can't drift.
   - `v:false` = label text (angles, persona avatars).
   - `manual:true` = use the given `ids` as-is (for ~variant merges / concept rows whose wording differs across ads). `allMatch:true` verifies every listed id truly contains it.
@@ -60,14 +61,15 @@ Derive a stable ID per script from its title: `Batch#22 → B#22`, `Cyperus Rotu
 
 ## Runbook — apply to a NEW brand
 1. **Confirm scripts exist** in `ads` under the brand's `brand_id` (with transcripts). Note the duplicate rows to skip.
-2. **List titles**, sort by batch number, design the ID scheme, and pick a diverse **pilot (~10 scripts)** to lock the taxonomy before doing all.
-3. **Read every line** of each script (never automate-skip the reading). Batch the work (~15–20 scripts per pass) so quality holds.
-4. Per script, add entries to `blueprint_entries.js`: all hooks, one angle label, the full-verbatim mechanism/CTA/problems/desires, avatars, and merge recurring blocks. Shared blocks defined once auto-cover across the brand.
-5. **Run the builder** after each batch: `node scripts/build_blueprint.js`. Fix any anchor that fails verification (0 failures = done).
-6. **Confirm completeness:** every script has an Angle (each script should appear in ≥1 Angle row).
-7. Deliver `output/<brand>_blueprint.csv`.
+2. **Create the config:** copy `scripts/blueprint_entries.kelle-skin.js` → `scripts/blueprint_entries.<slug>.js`. Fill in that brand's `dupTitles`, `titleToId` (its ID scheme), `sortKey`, and start an empty `entries` array.
+3. **List titles**, design the ID scheme, and pick a diverse **pilot (~10 scripts)** to lock the taxonomy before doing all.
+4. **Read every line** of each script (never automate-skip the reading). Batch the work (~15–20 scripts per pass) so quality holds.
+5. Per script, add entries: all hooks, one angle label, the full-verbatim mechanism/CTA/problems/desires, avatars, and merge recurring blocks. Shared blocks defined once auto-cover across the brand.
+6. **Run the builder** after each batch: `node scripts/build_blueprint.js --brand "<Brand>"`. Fix any anchor that fails verification (0 failures = done).
+7. **Confirm completeness:** every script has an Angle (each script should appear in ≥1 Angle row).
+8. Deliver `output/<slug>_blueprint.csv`.
 
-*(For Kelle the entries file is Kelle-specific; for a new brand, start a fresh entries file or namespace by brand. The builder + rules are brand-agnostic.)*
+*(The builder + rules are fully brand-agnostic; only the per-brand config file — ID scheme, dups, entries — is brand-specific. If a brand needs no custom ID scheme, omit `titleToId` and the raw title is used as the id.)*
 
 ---
 
@@ -80,8 +82,9 @@ Derive a stable ID per script from its title: `Batch#22 → B#22`, `Cyperus Rotu
 ---
 
 ## File references
-- `scripts/build_blueprint.js` — the deterministic builder (auto-coverage, fidelity guard, dedup).
-- `scripts/blueprint_entries.js` — source-of-truth entries (Kelle reference implementation).
-- `output/kelle_blueprint.csv` — reference output (Kelle, 121 scripts / 602 elements).
+- `scripts/build_blueprint.js` — the deterministic, brand-agnostic builder (`--brand "<name>"`; auto-coverage, fidelity guard, dedup).
+- `scripts/blueprint_entries.kelle-skin.js` — the reference per-brand config (copy this to start a new brand).
+- `scripts/blueprint_entries.js` — Kelle's raw `entries` array (imported by the config above).
+- `output/kelle-skin_blueprint.csv` — reference output (Kelle, 121 scripts / 602 elements).
 - `docs/messaging-blueprint-methodology.md` — this file.
 - Supabase: this methodology is stored in `brand_analyses` under **BRIGHT IDEAS (brand_id 32)**, `analysis_type = methodology`, `prompt_version = 8-layer-messaging-blueprint-v1`.
