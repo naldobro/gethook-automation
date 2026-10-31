@@ -1,0 +1,272 @@
+<title>Smooche — 8-Layer Messaging Teardown</title>
+<style>
+  :root{
+    --ground:#F6F1F0; --panel:#FFFFFF; --panel-2:#F0E7E8;
+    --ink:#241820; --muted:#6E5A63; --faint:#9E8A92;
+    --line:#EADCDE; --line-strong:#D8C4C8;
+    --plum:#8E3B5E; --plum-soft:#F4DEE7; --plum-ink:#6E2846;
+    --rose:#C06A86; --rose-soft:#F7E3EA;
+    --gold:#A9852F; --gold-soft:#F1E7CF;
+    --sage:#4F6B5A; --sage-soft:#E0EAE2;
+    --shadow:0 1px 2px rgba(36,24,32,.05),0 12px 32px rgba(36,24,32,.07);
+    --serif:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ground:#191216; --panel:#221A1E; --panel-2:#2C2126;
+      --ink:#F3E9EC; --muted:#C0A8B2; --faint:#836F78;
+      --line:#342730; --line-strong:#48343E;
+      --plum:#D98AAB; --plum-soft:#39222E; --plum-ink:#EBB0C6;
+      --rose:#D68EA4; --rose-soft:#331F27;
+      --gold:#D3AA55; --gold-soft:#2F2512;
+      --sage:#8FB49C; --sage-soft:#1F2A23;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 36px rgba(0,0,0,.42);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#191216; --panel:#221A1E; --panel-2:#2C2126;
+    --ink:#F3E9EC; --muted:#C0A8B2; --faint:#836F78;
+    --line:#342730; --line-strong:#48343E;
+    --plum:#D98AAB; --plum-soft:#39222E; --plum-ink:#EBB0C6;
+    --rose:#D68EA4; --rose-soft:#331F27;
+    --gold:#D3AA55; --gold-soft:#2F2512;
+    --sage:#8FB49C; --sage-soft:#1F2A23;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 36px rgba(0,0,0,.42);
+  }
+  :root[data-theme="light"]{
+    --ground:#F6F1F0; --panel:#FFFFFF; --panel-2:#F0E7E8;
+    --ink:#241820; --muted:#6E5A63; --faint:#9E8A92;
+    --line:#EADCDE; --line-strong:#D8C4C8;
+    --plum:#8E3B5E; --plum-soft:#F4DEE7; --plum-ink:#6E2846;
+    --rose:#C06A86; --rose-soft:#F7E3EA;
+    --gold:#A9852F; --gold-soft:#F1E7CF;
+    --sage:#4F6B5A; --sage-soft:#E0EAE2;
+    --shadow:0 1px 2px rgba(36,24,32,.05),0 12px 32px rgba(36,24,32,.07);
+  }
+  *{box-sizing:border-box}
+  body{margin:0}
+  .wrap{background:var(--ground);color:var(--ink);font-family:var(--sans);line-height:1.6;
+    -webkit-font-smoothing:antialiased;padding:0 20px 80px}
+  .col{max-width:920px;margin:0 auto}
+  header{padding:64px 0 30px;border-bottom:1px solid var(--line-strong)}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--plum);font-weight:600;margin:0 0 18px}
+  h1{font-family:var(--serif);font-weight:700;letter-spacing:-.01em;line-height:1.04;
+    font-size:clamp(36px,6.6vw,66px);margin:0;text-wrap:balance}
+  h1 em{font-style:italic;color:var(--plum)}
+  .dek{font-family:var(--serif);font-size:clamp(17px,2.4vw,21px);color:var(--muted);
+    max-width:64ch;margin:22px 0 0;line-height:1.5}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:26px;font-family:var(--mono);
+    font-size:12px;color:var(--faint);letter-spacing:.04em}
+  .meta b{color:var(--muted);font-weight:600}
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:34px 0 10px}
+  @media(max-width:640px){.tiles{grid-template-columns:repeat(2,1fr)}}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 16px;box-shadow:var(--shadow)}
+  .tile .n{font-family:var(--serif);font-size:34px;font-weight:700;letter-spacing:-.02em;
+    font-variant-numeric:tabular-nums;line-height:1;color:var(--plum)}
+  .tile .l{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.35}
+  section{padding:44px 0 6px}
+  .kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--gold);font-weight:600;margin:0 0 10px}
+  h2{font-family:var(--serif);font-size:clamp(24px,3.6vw,33px);font-weight:700;letter-spacing:-.01em;margin:0 0 6px;text-wrap:balance}
+  h2 em{font-style:italic;color:var(--plum)}
+  .lede{font-family:var(--serif);color:var(--muted);font-size:17px;max-width:66ch;margin:6px 0 24px}
+  p{max-width:70ch}
+  .thesis{background:var(--panel);border:1px solid var(--line-strong);border-left:4px solid var(--plum);
+    border-radius:14px;padding:24px 26px;box-shadow:var(--shadow);font-family:var(--serif);
+    font-size:18.5px;line-height:1.55;color:var(--ink)}
+  .thesis b{font-family:var(--sans);font-weight:700;background:var(--plum-soft);color:var(--plum-ink);
+    padding:1px 6px;border-radius:5px}
+  .layers{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:640px){.layers{grid-template-columns:1fr}}
+  .layer{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;
+    box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px}
+  .layer .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .layer .name{font-weight:700;font-size:15.5px}
+  .layer .cnt{font-family:var(--mono);font-size:12px;color:var(--plum);font-weight:600;
+    background:var(--plum-soft);padding:2px 8px;border-radius:20px;white-space:nowrap}
+  .layer .ex{font-family:var(--serif);font-size:14px;color:var(--muted);line-height:1.45;font-style:italic}
+  .layer .ex::before{content:"“"}.layer .ex::after{content:"”"}
+  .rank{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+  .row{display:grid;grid-template-columns:56px 1fr;gap:14px;padding:13px 18px;align-items:center;border-top:1px solid var(--line)}
+  .row:first-child{border-top:none}
+  .row .bar{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;color:var(--plum);text-align:right}
+  .row .bar small{color:var(--faint);font-weight:400;font-size:10.5px;display:block;letter-spacing:.05em}
+  .row .txt{font-size:14.5px}
+  .row .txt em{font-family:var(--serif);font-style:italic;color:var(--muted)}
+  .tbl{width:100%;border-collapse:collapse;font-size:14.5px;background:var(--panel);
+    border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+  .tblwrap{overflow-x:auto}
+  .tbl th{text-align:left;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);font-weight:600;padding:14px 16px;border-bottom:1px solid var(--line-strong)}
+  .tbl td{padding:12px 16px;border-top:1px solid var(--line);vertical-align:top}
+  .tbl td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--plum);font-weight:700;white-space:nowrap}
+  .tbl tr td:first-child{font-weight:700}
+  .ladder{display:flex;flex-direction:column;gap:10px;counter-reset:step}
+  .step{display:grid;grid-template-columns:34px 1fr;gap:16px;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+  .step .num{counter-increment:step;font-family:var(--mono);font-weight:700;color:var(--rose);font-size:15px;padding-top:1px}
+  .step .num::before{content:counter(step,decimal-leading-zero)}
+  .step h3{margin:0 0 4px;font-size:15.5px;font-weight:700}
+  .step p{margin:0;font-size:14px;color:var(--muted);max-width:none}
+  .step .verb{font-family:var(--serif);font-style:italic;color:var(--plum-ink)}
+  .gaps{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:640px){.gaps{grid-template-columns:1fr}}
+  .gap{background:var(--sage-soft);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .gap h3{margin:0 0 5px;font-size:14.5px;font-weight:700;color:var(--sage)}
+  .gap p{margin:0;font-size:13.5px;color:var(--muted);max-width:none}
+  footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);
+    font-family:var(--mono);font-size:11.5px;color:var(--faint);letter-spacing:.03em;line-height:1.7}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 9px;border-radius:20px;
+    background:var(--gold-soft);color:var(--gold);font-weight:600;letter-spacing:.05em}
+</style>
+
+<div class="wrap">
+<div class="col">
+
+  <header>
+    <p class="eyebrow">GetHook Ad Intelligence · Competitive Field Report</p>
+    <h1>Smooche. The <em>Korean-foundation</em> conversion machine</h1>
+    <p class="dek">Every messaging building block in Smooche's live video ad library — the adaptive-pigment foundation that sells mature women a way to look like the younger version of themselves — deduplicated and split across eight layers.</p>
+    <div class="meta">
+      <span><b>193</b> video ads scraped</span>
+      <span><b>419</b> messaging elements</span>
+      <span><b>8</b> layers</span>
+      <span><b>0</b> fidelity failures</span>
+      <span>Method: <b>8-layer blueprint v1</b></span>
+    </div>
+  </header>
+
+  <div class="tiles">
+    <div class="tile"><div class="n">251%</div><div class="l">the hero claim — <b>“better than American formulas”</b> — the single most-repeated line (25 ads)</div></div>
+    <div class="tile"><div class="n">“I&nbsp;lied”</div><div class="l">the overstock-apology BOF frame anchors the account's biggest angle cluster (10+ ads)</div></div>
+    <div class="tile"><div class="n">60%</div><div class="l">off + BOGO — the offer is nearly always the same discount + free-bottle stack</div></div>
+    <div class="tile"><div class="n">sisters</div><div class="l">the north-star desire: <b>“you two look like sisters”</b> — youth without looking “done”</div></div>
+  </div>
+
+  <section>
+    <p class="kicker">The strategic thesis</p>
+    <div class="thesis">
+      Smooche runs one engine across all 193 ads: reframe foundation as <b>Korean pharmacy-grade skin science</b>, not makeup. The enemy is always the <em>“rigid pigment”</em> luxury foundation ($2,000 of Chanel/Dior) that <em>sits on top and ages you</em>; the mechanism is always an <b>adaptive micro-pigment that reads your skin</b> and disappears; the proof is always someone saying <em>“you look like sisters”</em> or <em>“have you had work done?”</em>; and the close is almost always a <b>60%-off overstock-apology BOGO</b> wrapped in a confession (“because I lied — we overproduced”).
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer inventory</p>
+    <h2>The eight layers, by volume</h2>
+    <p class="lede">Distinct, deduplicated elements tested in each layer — with the highest-coverage exemplar.</p>
+    <div class="layers">
+      <div class="layer"><div class="top"><span class="name">1 · Hook</span><span class="cnt">130 distinct</span></div><div class="ex">I went on a blind date in Seoul one night…</div></div>
+      <div class="layer"><div class="top"><span class="name">2 · Angle</span><span class="cnt">193 ads → ~10 families</span></div><div class="ex">One reason per ad; the same skin-science argument re-lensed</div></div>
+      <div class="layer"><div class="top"><span class="name">3 · Unique mechanism</span><span class="cnt">28 distinct</span></div><div class="ex">it reads your skin and turns into your exact shade</div></div>
+      <div class="layer"><div class="top"><span class="name">4 · CTA</span><span class="cnt">20 distinct</span></div><div class="ex">Smooch is $40 right now, 60% off</div></div>
+      <div class="layer"><div class="top"><span class="name">5 · Avatar</span><span class="cnt">21 distinct</span></div><div class="ex">After menopause, your skin gets drier and thinner</div></div>
+      <div class="layer"><div class="top"><span class="name">6 · Problem</span><span class="cnt">17 distinct</span></div><div class="ex">it sits on top, it looks heavy… it ages you</div></div>
+      <div class="layer"><div class="top"><span class="name">7 · Desire</span><span class="cnt">18 distinct</span></div><div class="ex">You two look like sisters</div></div>
+      <div class="layer"><div class="top"><span class="name">8 · Repeated spine</span><span class="cnt">17 distinct</span></div><div class="ex">251% better than American formulas</div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 2 · Angle taxonomy</p>
+    <h2>Ten lenses on one product</h2>
+    <p class="lede">The 193 ads collapse into a handful of repeatable angle families. Order ≈ how heavily each is pressed in the scraped set.</p>
+    <div class="tblwrap">
+    <table class="tbl">
+      <thead><tr><th>Angle family</th><th>Ads</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td>Overstock-apology BOF</td><td class="n">~15</td><td>“Because I lied — we overproduced / the intern over-ordered / I'm risking my job.” Confession as a discount excuse.</td></tr>
+        <tr><td>UGC try-on / first-reaction</td><td class="n">~30</td><td>Real face applying it — shade-match, redness & rosacea coverage, dry mature skin, “is it magic?”</td></tr>
+        <tr><td>Korean-origin story</td><td class="n">~8</td><td>Blind date in Seoul, went viral, Sephora frustration — establishes the “why Korean formula” frame.</td></tr>
+        <tr><td>Over-Botox advertorial</td><td class="n">~5</td><td>Long-form ex-husband / dating story; foundation as the anti-aging alternative to injectables.</td></tr>
+        <tr><td>Offer / BOGO / clearance</td><td class="n">~20</td><td>Mother's Day, spring clearance, summer sale, “don't buy a single bottle,” free mystery gift.</td></tr>
+        <tr><td>Listicle (“7 reasons”)</td><td class="n">~6</td><td>“7 reasons everyone's obsessed,” “6 reasons / 100,000 women” — rapid benefit stack.</td></tr>
+        <tr><td>Anti-luxury / anti-Amazon</td><td class="n">~5</td><td>“It's not expensive, it's costly,” buy direct 60% off, don't get scammed by resellers.</td></tr>
+        <tr><td>Personified product</td><td class="n">~2</td><td>The foundation “speaks” vs luxury/drugstore rivals.</td></tr>
+        <tr><td>Product-line extensions</td><td class="n">~6</td><td>Brow-growth serum, lip stain (peel-off), lip plumper — same offer engine, new SKUs.</td></tr>
+        <tr><td>No-VO (music / outro / lyric)</td><td class="n">~10</td><td>Sound-led or text-only cuts with no spoken copy.</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 8 · The spine</p>
+    <h2>The lines that recur everywhere</h2>
+    <p class="lede">Highest-coverage repeated blocks — the reusable phrases bolted onto most creatives. Number = ads containing that exact block.</p>
+    <div class="rank">
+      <div class="row"><div class="bar">25<small>ads</small></div><div class="txt"><em>“251% better than American formulas”</em> — the hero science claim</div></div>
+      <div class="row"><div class="bar">10<small>ads</small></div><div class="txt"><em>“because I lied”</em> — the overstock-apology pivot line</div></div>
+      <div class="row"><div class="bar">10<small>ads</small></div><div class="txt"><em>“Korean pharmacists”</em> — authority / provenance anchor</div></div>
+      <div class="row"><div class="bar">9<small>ads</small></div><div class="txt"><em>“rigid pigments that can't adapt”</em> — the enemy formula</div></div>
+      <div class="row"><div class="bar">8<small>ads</small></div><div class="txt"><em>“One layer, 30 seconds”</em> — the ease proof</div></div>
+      <div class="row"><div class="bar">7<small>ads</small></div><div class="txt"><em>“Every pharmacist recommends it”</em> — social/authority proof</div></div>
+      <div class="row"><div class="bar">6<small>ads</small></div><div class="txt"><em>“51,837” reviews</em> — hard social-proof number</div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 3 · Mechanism ladder</p>
+    <h2>Why it “reads your skin”</h2>
+    <p class="lede">Smooche doesn't argue “better color.” It argues a <span class="pill">skincare mechanism</span> — a foundation that behaves like biology, against a rival that behaves like paint.</p>
+    <div class="ladder">
+      <div class="step"><div class="num"></div><div><h3>Adaptive micro-pigments</h3><p><span class="verb">The magic trick.</span> Micro-encapsulated pigments react to your skin's warmth and undertones — “goes on white and turns into your exact shade.” Solves the never-right-shade problem.</p></div></div>
+      <div class="step"><div class="num"></div><div><h3>Bonds instead of sits</h3><p><span class="verb">The enemy contrast.</span> “Smooch bonds to skin instead of sitting on it” — no primer needed; rigid luxury pigments “sit on top, look heavy, age you.”</p></div></div>
+      <div class="step"><div class="num"></div><div><h3>251% faster penetration</h3><p><span class="verb">The number.</span> A protein complex that penetrates “251% faster than regular foundations” — the quantified science hook.</p></div></div>
+      <div class="step"><div class="num"></div><div><h3>Skincare, not makeup</h3><p><span class="verb">The category re-frame.</span> Hyaluronic acid keeps skin hydrated and dewy — it treats while it covers, so “the more makeup you wear” doesn't age you.</p></div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 4 · the offer</p>
+    <h2>Offer architecture</h2>
+    <p class="lede">Every close funnels to the same stacked discount, delivered through interchangeable “reasons” for the sale.</p>
+    <div class="tblwrap">
+    <table class="tbl">
+      <thead><tr><th>Component</th><th>How it shows up</th></tr></thead>
+      <tbody>
+        <tr><td>Price</td><td>“$40 right now, 60% off” · anchored against $2,000 of luxury foundation and $59 → $39 “secret” deals</td></tr>
+        <tr><td>Bundle</td><td>Buy-two-get-one-free, BOGO, “don't buy a single bottle,” free liquid-blush / mystery gift</td></tr>
+        <tr><td>Guarantee</td><td>“Risk-free for 30 days”</td></tr>
+        <tr><td>Reason for sale</td><td>Overstock apology (“we overproduced / intern over-ordered / risking my job”), Mother's Day, spring clearance, 4th of July, women's-month</td></tr>
+        <tr><td>Proof</td><td>“2 million bottles sold in Korea,” “300,000+ reviews at 4.8 stars,” “51,837 reviews”</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layers 6 & 7 · pain → dream</p>
+    <h2>The emotional arc</h2>
+    <p class="lede">Smooche sells a feeling more than a finish — from erased to seen.</p>
+    <div class="layers">
+      <div class="layer"><div class="top"><span class="name">Problem</span><span class="cnt">the erasure</span></div><div class="ex">My skin looked grey and hollow, like the light drained out of me along with my marriage</div></div>
+      <div class="layer"><div class="top"><span class="name">Problem</span><span class="cnt">wasted spend</span></div><div class="ex">I'd spent over $2,000 on foundation — Chanel, Dior, Charlotte Tilbury, Nars, Huda Beauty</div></div>
+      <div class="layer"><div class="top"><span class="name">Desire</span><span class="cnt">the reveal</span></div><div class="ex">Now I look 10 years younger. People keep asking if I've had work done</div></div>
+      <div class="layer"><div class="top"><span class="name">Desire</span><span class="cnt">soul skin</span></div><div class="ex">At 63, I've got better things to do than look backward — I'm too busy glowing</div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Whitespace</p>
+    <h2>What they're <em>not</em> testing</h2>
+    <p class="lede">Gaps in the current library — angles a competitor (or Smooche itself) could open up.</p>
+    <div class="gaps">
+      <div class="gap"><h3>Younger avatar (25–35)</h3><p>Almost everything targets 39–63 / menopausal skin. The “effortless everyday” frame for younger buyers is untested.</p></div>
+      <div class="gap"><h3>Dermatologist / clinical authority</h3><p>“Korean pharmacists” carries the authority; no ad uses a named derm or clinical-study framing.</p></div>
+      <div class="gap"><h3>Routine-replacement math</h3><p>Anti-luxury exists, but no ad hard-quantifies “replaces primer + foundation + concealer + serum.”</p></div>
+      <div class="gap"><h3>Subscription / refill lifecycle</h3><p>Offers are all one-time BOGO; no recurring / auto-replenish angle in the set.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    Smooche · brand_id 55 · 193 ads · 419 deduplicated messaging elements across 8 layers · 0 fidelity failures.<br>
+    Generated by the deterministic 8-layer blueprint builder (docs/messaging-blueprint-methodology.md). Verbatim everywhere except Angle. Coverage auto-computed against source transcripts.<br>
+    GetHook Ad Intelligence — competitive teardown, not affiliated with Smooche.
+  </footer>
+
+</div>
+</div>

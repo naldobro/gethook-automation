@@ -5,7 +5,14 @@ const path = require('path');
 const PROJECT_ROOT = path.join(__dirname, '..', '..');
 
 module.exports = {
-  TARGET_URL: 'https://app.gethookd.ai',
+  // Land directly on the Brands search page (NOT /explore, which is the ads
+  // feed). This is where the "Explore Ads / Brands" switcher + "Search brands"
+  // box live, exactly what navigation.js drives. The bare root
+  // (app.gethookd.ai) redirects to an account-default landing page that can
+  // vary — observed post-login redirecting to a page WITHOUT the Brands tab,
+  // so navigation.js timed out waiting for the tab. /explore/brands always
+  // has it.
+  TARGET_URL: 'https://app.gethookd.ai/explore/brands',
 
   // Standard macOS install path for the Chrome app itself (not a profile).
   CHROME_APP_PATH: '/Applications/Google Chrome.app',

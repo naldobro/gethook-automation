@@ -1,0 +1,255 @@
+<title>Clean Nutraceuticals — 8-Layer Messaging Teardown</title>
+<style>
+  :root{
+    --ground:#F3F6F5; --panel:#FFFFFF; --panel-2:#E7EEEC;
+    --ink:#152825; --muted:#4E6763; --faint:#8AA09B;
+    --line:#DDE7E4; --line-strong:#C4D3CF;
+    --teal:#0E8C7E; --teal-soft:#D3ECE7; --teal-ink:#0A6459;
+    --coral:#E4685C; --coral-soft:#FADDD8; --coral-ink:#B4453A;
+    --tang:#D9812A; --tang-soft:#F8E6CD;
+    --plum:#7A5AA6; --plum-soft:#E9E0F2;
+    --shadow:0 1px 2px rgba(21,40,37,.05),0 12px 30px rgba(21,40,37,.07);
+    --serif:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ground:#0F1615; --panel:#17201E; --panel-2:#1F2A28;
+      --ink:#E9F1EF; --muted:#A3B8B3; --faint:#6E827D;
+      --line:#26312F; --line-strong:#36443F;
+      --teal:#3FC2B0; --teal-soft:#12302B; --teal-ink:#66D6C6;
+      --coral:#F08A7E; --coral-soft:#331B18; --coral-ink:#F6ABA1;
+      --tang:#E5A455; --tang-soft:#2E2210;
+      --plum:#B296D6; --plum-soft:#241B31;
+      --shadow:0 1px 2px rgba(0,0,0,.45),0 14px 34px rgba(0,0,0,.45);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0F1615; --panel:#17201E; --panel-2:#1F2A28;
+    --ink:#E9F1EF; --muted:#A3B8B3; --faint:#6E827D;
+    --line:#26312F; --line-strong:#36443F;
+    --teal:#3FC2B0; --teal-soft:#12302B; --teal-ink:#66D6C6;
+    --coral:#F08A7E; --coral-soft:#331B18; --coral-ink:#F6ABA1;
+    --tang:#E5A455; --tang-soft:#2E2210;
+    --plum:#B296D6; --plum-soft:#241B31;
+    --shadow:0 1px 2px rgba(0,0,0,.45),0 14px 34px rgba(0,0,0,.45);
+  }
+  :root[data-theme="light"]{
+    --ground:#F3F6F5; --panel:#FFFFFF; --panel-2:#E7EEEC;
+    --ink:#152825; --muted:#4E6763; --faint:#8AA09B;
+    --line:#DDE7E4; --line-strong:#C4D3CF;
+    --teal:#0E8C7E; --teal-soft:#D3ECE7; --teal-ink:#0A6459;
+    --coral:#E4685C; --coral-soft:#FADDD8; --coral-ink:#B4453A;
+    --tang:#D9812A; --tang-soft:#F8E6CD;
+    --plum:#7A5AA6; --plum-soft:#E9E0F2;
+    --shadow:0 1px 2px rgba(21,40,37,.05),0 12px 30px rgba(21,40,37,.07);
+  }
+  *{box-sizing:border-box}
+  body{margin:0}
+  .wrap{background:var(--ground);color:var(--ink);font-family:var(--sans);line-height:1.6;
+    -webkit-font-smoothing:antialiased;padding:0 20px 80px}
+  .col{max-width:920px;margin:0 auto}
+  header{padding:64px 0 30px;border-bottom:2px solid var(--teal)}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--teal-ink);font-weight:600;margin:0 0 18px}
+  h1{font-family:var(--sans);font-weight:800;letter-spacing:-.025em;line-height:1.02;
+    font-size:clamp(36px,6.6vw,66px);margin:0;text-wrap:balance}
+  h1 em{font-style:normal;color:var(--coral)}
+  .dek{font-family:var(--serif);font-size:clamp(17px,2.4vw,21px);color:var(--muted);
+    max-width:64ch;margin:22px 0 0;line-height:1.5}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:26px;font-family:var(--mono);
+    font-size:12px;color:var(--faint);letter-spacing:.04em}
+  .meta b{color:var(--muted);font-weight:600}
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:34px 0 10px}
+  @media(max-width:640px){.tiles{grid-template-columns:repeat(2,1fr)}}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:18px 16px;box-shadow:var(--shadow)}
+  .tile .n{font-size:32px;font-weight:800;letter-spacing:-.03em;
+    font-variant-numeric:tabular-nums;line-height:1.05;color:var(--teal-ink)}
+  .tile .l{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.35}
+  section{padding:44px 0 6px}
+  .kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--tang);font-weight:600;margin:0 0 10px}
+  h2{font-size:clamp(24px,3.6vw,32px);font-weight:800;letter-spacing:-.02em;margin:0 0 6px;text-wrap:balance}
+  h2 em{font-style:normal;color:var(--coral)}
+  .lede{font-family:var(--serif);color:var(--muted);font-size:17px;max-width:66ch;margin:6px 0 24px}
+  p{max-width:70ch}
+  .thesis{background:var(--panel);border:1px solid var(--line-strong);border-left:4px solid var(--teal);
+    border-radius:16px;padding:24px 26px;box-shadow:var(--shadow);font-family:var(--serif);
+    font-size:18.5px;line-height:1.55;color:var(--ink)}
+  .thesis b{font-family:var(--sans);font-weight:700;background:var(--teal-soft);color:var(--teal-ink);
+    padding:1px 6px;border-radius:5px}
+  .layers{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:640px){.layers{grid-template-columns:1fr}}
+  .layer{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px 18px;
+    box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px}
+  .layer .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .layer .name{font-weight:700;font-size:15.5px}
+  .layer .cnt{font-family:var(--mono);font-size:12px;color:var(--teal-ink);font-weight:600;
+    background:var(--teal-soft);padding:2px 8px;border-radius:20px;white-space:nowrap}
+  .layer .ex{font-family:var(--serif);font-size:14px;color:var(--muted);line-height:1.45;font-style:italic}
+  .layer .ex::before{content:"“"}.layer .ex::after{content:"”"}
+  .rank{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);
+    border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+  .row{display:grid;grid-template-columns:56px 1fr;gap:14px;padding:13px 18px;align-items:center;border-top:1px solid var(--line)}
+  .row:first-child{border-top:none}
+  .row .bar{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;color:var(--teal-ink);text-align:right}
+  .row .bar small{color:var(--faint);font-weight:400;font-size:10.5px;display:block;letter-spacing:.05em}
+  .row .txt{font-size:14.5px}
+  .row .txt em{font-family:var(--serif);font-style:italic;color:var(--muted)}
+  .tbl{width:100%;border-collapse:collapse;font-size:14.5px;background:var(--panel);
+    border:1px solid var(--line);border-radius:16px;overflow:hidden;box-shadow:var(--shadow)}
+  .tblwrap{overflow-x:auto}
+  .tbl th{text-align:left;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);font-weight:600;padding:14px 16px;border-bottom:1px solid var(--line-strong)}
+  .tbl td{padding:12px 16px;border-top:1px solid var(--line);vertical-align:top}
+  .tbl td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--teal-ink);font-weight:700;white-space:nowrap}
+  .tbl tr td:first-child{font-weight:700}
+  .ladder{display:flex;flex-direction:column;gap:10px;counter-reset:step}
+  .step{display:grid;grid-template-columns:34px 1fr;gap:16px;background:var(--panel);border:1px solid var(--line);
+    border-radius:16px;padding:16px 18px;box-shadow:var(--shadow)}
+  .step .num{counter-increment:step;font-family:var(--mono);font-weight:700;color:var(--coral);font-size:15px;padding-top:1px}
+  .step .num::before{content:counter(step,decimal-leading-zero)}
+  .step h3{margin:0 0 4px;font-size:15.5px;font-weight:700}
+  .step p{margin:0;font-size:14px;color:var(--muted);max-width:none}
+  .step .verb{font-family:var(--serif);font-style:italic;color:var(--teal-ink)}
+  .gaps{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:640px){.gaps{grid-template-columns:1fr}}
+  .gap{background:var(--plum-soft);border:1px solid var(--line);border-radius:16px;padding:16px 18px}
+  .gap h3{margin:0 0 5px;font-size:14.5px;font-weight:700;color:var(--plum)}
+  .gap p{margin:0;font-size:13.5px;color:var(--muted);max-width:none}
+  footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);
+    font-family:var(--mono);font-size:11.5px;color:var(--faint);letter-spacing:.03em;line-height:1.7}
+</style>
+
+<div class="wrap">
+<div class="col">
+
+  <header>
+    <p class="eyebrow">GetHook Ad Intelligence · Competitive Field Report</p>
+    <h1>Clean Nutraceuticals. <em>The format is the product</em></h1>
+    <p class="dek">Every messaging building block in Clean Nutra's live ad library — a seven-SKU TikTok-Shop portfolio that runs the same handful of creative templates across every product — deduplicated and split across eight layers.</p>
+    <div class="meta">
+      <span><b>99</b> video ads scraped</span>
+      <span><b>226</b> messaging elements</span>
+      <span><b>7</b> products</span>
+      <span><b>8</b> layers</span>
+      <span><b>0</b> fidelity failures</span>
+    </div>
+  </header>
+
+  <div class="tiles">
+    <div class="tile"><div class="n">$100+</div><div class="l">the universal value hook — “buy all these separately” vs one all-in-one</div></div>
+    <div class="tile"><div class="n">BOGO</div><div class="l">buy-one-get-one, tied to “orange shopping cart” scarcity, in ~14 ads</div></div>
+    <div class="tile"><div class="n">NAD</div><div class="l">the single most-named concept (33 ads) — the Longevity Duo dominates the mix</div></div>
+    <div class="tile"><div class="n">GMP</div><div class="l">GMP-certified + third-party-tested trust cue on ~25 ads (the whole portfolio)</div></div>
+  </div>
+
+  <section>
+    <p class="kicker">The strategic thesis</p>
+    <div class="thesis">
+      Clean Nutra isn't a product brand — it's a <b>creative-template machine</b>. A small set of formats (ingredient personification, enemy personification, “fake vs official,” doctor dialogue, GLP-1 muscle-defense) get <b>reskinned across seven SKUs</b>. Every product is framed the same way: an <b>all-in-one that replaces “$100 of separate supplements,”</b> proven by <b>GMP-certified / third-party-tested / made-in-USA</b> trust cues, and closed on a <b>BOGO + “if you still see the orange cart” scarcity</b>. The winner right now is the <b>Longevity Duo</b> (NMN + Urolithin A), which alone accounts for roughly a third of the library.
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">The portfolio</p>
+    <h2>Seven products, one playbook</h2>
+    <p class="lede">Share of the scraped set, each product's core promise, and the enemy it sells against.</p>
+    <div class="tblwrap">
+    <table class="tbl">
+      <thead><tr><th>Product</th><th>Ads</th><th>Promise & enemy</th></tr></thead>
+      <tbody>
+        <tr><td>Longevity Duo (NMN + Urolithin A)</td><td class="n">~35</td><td>Anti-aging “two pathways” — fuel the cell + clean the engine; enemy = $125 single-ingredient luxury supplements.</td></tr>
+        <tr><td>Shelf Builder (women's creatine)</td><td class="n">~28</td><td>Fuller glutes + skin/hair; enemy = gym-bro creatine fear &amp; GLP-1 muscle loss.</td></tr>
+        <tr><td>Glucotone (blood-sugar drops)</td><td class="n">~12</td><td>A1C / insulin resistance / PCOS; enemy = metformin &amp; “your doctor's meds.”</td></tr>
+        <tr><td>VascuGlo (men's circulation)</td><td class="n">~8</td><td>Blood flow / cardiovascular; enemy = aging, low energy (ED-adjacent).</td></tr>
+        <tr><td>ParaDefend (parasite cleanse)</td><td class="n">~6</td><td>12 bitter herbs flush parasites; enemy = probiotics &amp; “basic cleanses.”</td></tr>
+        <tr><td>Adaptal Drive / ThyroBloom</td><td class="n">~5</td><td>Energy/adaptogens &amp; thyroid; enemy = caffeine, “pills that don't deliver.”</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 1 & 2 · The format engine</p>
+    <h2>The templates that get reskinned</h2>
+    <p class="lede">Angle families aren't product-specific — they're the reusable formats stamped onto whichever SKU is being pushed.</p>
+    <div class="tblwrap">
+    <table class="tbl">
+      <thead><tr><th>Format</th><th>How it works</th></tr></thead>
+      <tbody>
+        <tr><td>Ingredient personification</td><td>Each ingredient “speaks”: “I'm creatine…”, “I'm Berberine…”, “I'm Cayenne Pepper…” then merges into the all-in-one.</td></tr>
+        <tr><td>Enemy personification</td><td>The thing failing you talks: “Hey girl, it's me, your energy drink / your vape / detox tea / Botox” — none of them fix it, the product does.</td></tr>
+        <tr><td>“Fake vs official”</td><td>“Fake, fake, a really good fake” — anti-counterfeit that doubles as a trust + blue-check credibility play.</td></tr>
+        <tr><td>Doctor / clinic dialogue</td><td>“Insulin resistance… insulin resistance…”; the GLP-1 clinic visit that ends in “14 supplements in one.”</td></tr>
+        <tr><td>GLP-1 muscle defense</td><td>“Your peach is turning into a pancake” — Ozempic strips glutes/hair; creatine stack protects them.</td></tr>
+        <tr><td>“If you want X, take Y” listicle</td><td>Rapid benefit → ingredient rundown, resolved by the all-in-one.</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 8 · The spine</p>
+    <h2>The lines that recur everywhere</h2>
+    <p class="lede">Highest-coverage repeated blocks — the trust + offer scaffolding bolted onto every SKU.</p>
+    <div class="rank">
+      <div class="row"><div class="bar">33<small>ads</small></div><div class="txt"><em>“NAD”</em> — the dominant concept (Longevity Duo's engine)</div></div>
+      <div class="row"><div class="bar">29<small>ads</small></div><div class="txt"><em>“third-party tested”</em> — the core trust cue</div></div>
+      <div class="row"><div class="bar">25<small>ads</small></div><div class="txt"><em>“GMP certified”</em> — paired credibility line</div></div>
+      <div class="row"><div class="bar">14<small>ads</small></div><div class="txt"><em>“buy one, get one free”</em> — the offer</div></div>
+      <div class="row"><div class="bar">7<small>ads</small></div><div class="txt"><em>“precursor to NAD”</em> — the NMN mechanism shorthand</div></div>
+      <div class="row"><div class="bar">6<small>ads</small></div><div class="txt"><em>“made in the USA”</em> — trust stack</div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 3 · Mechanism ladder</p>
+    <h2>The two arguments that carry the portfolio</h2>
+    <p class="lede">Most SKUs lean on one of two mechanism stories.</p>
+    <div class="ladder">
+      <div class="step"><div class="num"></div><div><h3>The “two pathways” aging story</h3><p><span class="verb">Longevity Duo.</span> NAD “drops 50% by middle age” (the fuel) <em>and</em> mitochondria accumulate damage (the cleanup). “NMN restores NAD, Urolithin A clears the damaged mitochondria” — “premium gas in a dirty engine” if you only take one.</p></div></div>
+      <div class="step"><div class="num"></div><div><h3>The creatine reframe</h3><p><span class="verb">Shelf Builder.</span> “Creatine isn't just for bodybuilders” — “lean muscle is the fastest way to burn fat,” and “creatine pulls water into the muscle cell, not under your skin” for fuller glutes.</p></div></div>
+      <div class="step"><div class="num"></div><div><h3>The GLP-1 depletion hook</h3><p><span class="verb">Cross-sell bridge.</span> “You're losing up to 40% lean muscle… it raids the glutes first” — turns the Ozempic wave into demand for the creatine stack.</p></div></div>
+      <div class="step"><div class="num"></div><div><h3>The blood-sugar / metformin angle</h3><p><span class="verb">Glucotone.</span> “Berberine compared directly to metformin” — insulin resistance reframed as the root of cravings, crashes, PCOS.</p></div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 4 · the offer</p>
+    <h2>Offer architecture</h2>
+    <div class="tblwrap">
+    <table class="tbl">
+      <thead><tr><th>Component</th><th>How it shows up</th></tr></thead>
+      <tbody>
+        <tr><td>Value anchor</td><td>“Buy all these ingredients separately = over $100 / $150 / $400 a month” vs one all-in-one</td></tr>
+        <tr><td>Offer</td><td>Buy-one-get-one-free (“two-pack bundle”), triple-discount checkout, free shipping</td></tr>
+        <tr><td>Guarantee</td><td>“Risk-free 30 days, send back the empty tub,” “180-day satisfaction guarantee,” money-back</td></tr>
+        <tr><td>Scarcity</td><td>“If you still see the orange shopping cart,” “they can never stay in stock,” “before they raise the price”</td></tr>
+        <tr><td>Trust</td><td>GMP certified · third-party tested · made in USA · “what's on the label is in the capsule” · QR-code transparency</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Whitespace</p>
+    <h2>What they're <em>not</em> testing</h2>
+    <p class="lede">Gaps across the portfolio.</p>
+    <div class="gaps">
+      <div class="gap"><h3>Real customer transformations</h3><p>Almost everything is UGC talking-head or personification; few before/after or timeline-proof formats (only one week-by-week).</p></div>
+      <div class="gap"><h3>Male buyer beyond VascuGlo</h3><p>Men appear only for circulation. Creatine/longevity are pitched female-only despite broad appeal.</p></div>
+      <div class="gap"><h3>Subscription / bundle-the-portfolio</h3><p>All single-SKU BOGO; no “stack Shelf Builder + Longevity” or auto-replenish cross-sell.</p></div>
+      <div class="gap"><h3>Authority / clinical proof</h3><p>Trust rests on GMP/third-party badges; almost no named experts, studies, or dosing transparency in-ad.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    Clean Nutraceuticals · brand_id 52 · 99 ads · 226 deduplicated messaging elements across 8 layers · 0 fidelity failures.<br>
+    Generated by the deterministic 8-layer blueprint builder (docs/messaging-blueprint-methodology.md). Verbatim everywhere except Angle. Coverage auto-computed against source transcripts.<br>
+    GetHook Ad Intelligence — competitive teardown, not affiliated with Clean Nutraceuticals.
+  </footer>
+
+</div>
+</div>

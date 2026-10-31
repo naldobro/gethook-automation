@@ -116,6 +116,16 @@ async function launchBrowser() {
       // — that's the greyed-out/unresponsive page. Opting into the sandbox
       // avoids both the unnecessary flag and the blocking infobar.
       chromiumSandbox: true,
+      // Google OAuth refuses to sign in on an "insecure" automation browser
+      // ("This browser or app may not be secure"), which blocks the manual
+      // login whenever the saved session has expired. Stripping the
+      // --enable-automation switch and the AutomationControlled blink feature
+      // removes the two biggest automation tells, so Google's sign-in lets the
+      // user through. Also removes the "controlled by automated software"
+      // infobar. Has no downside for normal scraping — it only changes how
+      // automated the browser looks, not what it can do.
+      ignoreDefaultArgs: ['--enable-automation'],
+      args: ['--disable-blink-features=AutomationControlled'],
     });
   } catch (err) {
     error('LAUNCH', `Failed to launch Chrome: ${err.message}`);

@@ -88,11 +88,48 @@ async function insertPage(brandId, name, type, foundViaDomain) {
   if (error) throw new Error(`Failed to insert page "${name}": ${error.message}`);
 }
 
+/**
+ * Find-or-create a page row by (brand_id, name) and return its id. Used by the
+ * direct-URL page scrape (user pastes a GetHook page link rather than relying on
+ * Ad Library discovery): records the real page_url + type, and if the row
+ * already exists, backfills a missing page_url/type rather than duplicating it
+ * (the table's unique (brand_id, name) would reject a second insert anyway).
+ */
+async function ensurePage(brandId, name, { type = 'whitelist', pageUrl = null } = {}) {
+  const { data: existing, error: selErr } = await supabase
+    .from('pages')
+    .select('id, page_url, type')
+    .eq('brand_id', brandId)
+    .eq('name', name)
+    .maybeSingle();
+  if (selErr) throw new Error(`Failed to look up page "${name}": ${selErr.message}`);
+
+  if (existing) {
+    const patch = {};
+    if (pageUrl && !existing.page_url) patch.page_url = pageUrl;
+    if (type && existing.type === 'main' && type !== 'main') patch.type = type; // don't silently demote
+    if (Object.keys(patch).length) {
+      const { error: updErr } = await supabase.from('pages').update(patch).eq('id', existing.id);
+      if (updErr) throw new Error(`Failed to update page "${name}": ${updErr.message}`);
+    }
+    return existing.id;
+  }
+
+  const { data: inserted, error: insErr } = await supabase
+    .from('pages')
+    .insert({ brand_id: brandId, name, type, page_url: pageUrl })
+    .select('id')
+    .single();
+  if (insErr) throw new Error(`Failed to insert page "${name}": ${insErr.message}`);
+  return inserted.id;
+}
+
 module.exports = {
   findBrands,
   getBrandLanderDomains,
   getExistingPageNames,
   getDiscoveredPages,
   insertPage,
+  ensurePage,
   toDomain,
 };

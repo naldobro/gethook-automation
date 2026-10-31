@@ -1,0 +1,268 @@
+<title>Bioroot Labs — 8-Layer Messaging Teardown</title>
+<style>
+  :root{
+    --ground:#F6F0E2; --panel:#FFFDF6; --panel-2:#EFE6D2;
+    --ink:#241C10; --muted:#6B5D45; --faint:#9A8A6C;
+    --line:#E6DBC4; --line-strong:#D2C3A2;
+    --gold:#B8801B; --gold-soft:#F4E6C4; --gold-ink:#8A5E10;
+    --brick:#A6402A; --brick-soft:#F1DAD1; --brick-ink:#822E1D;
+    --olive:#5F6A2E; --olive-soft:#E7EAD1;
+    --shadow:0 1px 2px rgba(36,28,16,.05),0 12px 30px rgba(36,28,16,.07);
+    --serif:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ground:#17130B; --panel:#201A10; --panel-2:#2A2215;
+      --ink:#F1E8D6; --muted:#B6A585; --faint:#7E7053;
+      --line:#332913; --line-strong:#463914;
+      --gold:#DDA739; --gold-soft:#332811; --gold-ink:#EBC066;
+      --brick:#DC7259; --brick-soft:#331C15; --brick-ink:#EC9880;
+      --olive:#9BAA5B; --olive-soft:#242A12;
+      --shadow:0 1px 2px rgba(0,0,0,.45),0 14px 34px rgba(0,0,0,.45);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#17130B; --panel:#201A10; --panel-2:#2A2215;
+    --ink:#F1E8D6; --muted:#B6A585; --faint:#7E7053;
+    --line:#332913; --line-strong:#463914;
+    --gold:#DDA739; --gold-soft:#332811; --gold-ink:#EBC066;
+    --brick:#DC7259; --brick-soft:#331C15; --brick-ink:#EC9880;
+    --olive:#9BAA5B; --olive-soft:#242A12;
+    --shadow:0 1px 2px rgba(0,0,0,.45),0 14px 34px rgba(0,0,0,.45);
+  }
+  :root[data-theme="light"]{
+    --ground:#F6F0E2; --panel:#FFFDF6; --panel-2:#EFE6D2;
+    --ink:#241C10; --muted:#6B5D45; --faint:#9A8A6C;
+    --line:#E6DBC4; --line-strong:#D2C3A2;
+    --gold:#B8801B; --gold-soft:#F4E6C4; --gold-ink:#8A5E10;
+    --brick:#A6402A; --brick-soft:#F1DAD1; --brick-ink:#822E1D;
+    --olive:#5F6A2E; --olive-soft:#E7EAD1;
+    --shadow:0 1px 2px rgba(36,28,16,.05),0 12px 30px rgba(36,28,16,.07);
+  }
+  *{box-sizing:border-box}
+  body{margin:0}
+  .wrap{background:var(--ground);color:var(--ink);font-family:var(--sans);line-height:1.6;
+    -webkit-font-smoothing:antialiased;padding:0 20px 80px}
+  .col{max-width:920px;margin:0 auto}
+  header{padding:64px 0 30px;border-bottom:2px solid var(--gold)}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--gold-ink);font-weight:600;margin:0 0 18px}
+  h1{font-family:var(--serif);font-weight:700;letter-spacing:-.01em;line-height:1.05;
+    font-size:clamp(35px,6.2vw,62px);margin:0;text-wrap:balance}
+  h1 em{font-style:italic;color:var(--gold)}
+  .dek{font-family:var(--serif);font-size:clamp(17px,2.4vw,21px);color:var(--muted);
+    max-width:64ch;margin:22px 0 0;line-height:1.5}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:26px;font-family:var(--mono);
+    font-size:12px;color:var(--faint);letter-spacing:.04em}
+  .meta b{color:var(--muted);font-weight:600}
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:34px 0 10px}
+  @media(max-width:640px){.tiles{grid-template-columns:repeat(2,1fr)}}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 16px;box-shadow:var(--shadow)}
+  .tile .n{font-family:var(--serif);font-size:33px;font-weight:700;letter-spacing:-.02em;
+    font-variant-numeric:tabular-nums;line-height:1.05;color:var(--gold-ink)}
+  .tile .l{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.35}
+  section{padding:44px 0 6px}
+  .kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--brick);font-weight:600;margin:0 0 10px}
+  h2{font-family:var(--serif);font-size:clamp(24px,3.6vw,32px);font-weight:700;letter-spacing:-.01em;margin:0 0 6px;text-wrap:balance}
+  h2 em{font-style:italic;color:var(--gold)}
+  .lede{font-family:var(--serif);color:var(--muted);font-size:17px;max-width:66ch;margin:6px 0 24px}
+  p{max-width:70ch}
+  .thesis{background:var(--panel);border:1px solid var(--line-strong);border-left:4px solid var(--gold);
+    border-radius:12px;padding:24px 26px;box-shadow:var(--shadow);font-family:var(--serif);
+    font-size:18.5px;line-height:1.55;color:var(--ink)}
+  .thesis b{font-family:var(--sans);font-weight:700;background:var(--gold-soft);color:var(--gold-ink);
+    padding:1px 6px;border-radius:5px}
+  .thesis .en{background:var(--brick-soft);color:var(--brick-ink)}
+  .layers{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:640px){.layers{grid-template-columns:1fr}}
+  .layer{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;
+    box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px}
+  .layer .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .layer .name{font-weight:700;font-size:15.5px}
+  .layer .cnt{font-family:var(--mono);font-size:12px;color:var(--gold-ink);font-weight:600;
+    background:var(--gold-soft);padding:2px 8px;border-radius:20px;white-space:nowrap}
+  .layer .ex{font-family:var(--serif);font-size:14px;color:var(--muted);line-height:1.45;font-style:italic}
+  .layer .ex::before{content:"“"}.layer .ex::after{content:"”"}
+  .rank{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  .row{display:grid;grid-template-columns:56px 1fr;gap:14px;padding:13px 18px;align-items:center;border-top:1px solid var(--line)}
+  .row:first-child{border-top:none}
+  .row .bar{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;color:var(--gold-ink);text-align:right}
+  .row .bar small{color:var(--faint);font-weight:400;font-size:10.5px;display:block;letter-spacing:.05em}
+  .row .txt{font-size:14.5px}
+  .row .txt em{font-family:var(--serif);font-style:italic;color:var(--muted)}
+  .tbl{width:100%;border-collapse:collapse;font-size:14.5px;background:var(--panel);
+    border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  .tblwrap{overflow-x:auto}
+  .tbl th{text-align:left;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);font-weight:600;padding:14px 16px;border-bottom:1px solid var(--line-strong)}
+  .tbl td{padding:12px 16px;border-top:1px solid var(--line);vertical-align:top}
+  .tbl td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--gold-ink);font-weight:700;white-space:nowrap}
+  .tbl tr td:first-child{font-weight:700}
+  .ladder{display:flex;flex-direction:column;gap:10px;counter-reset:step}
+  .step{display:grid;grid-template-columns:34px 1fr;gap:16px;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+  .step .num{counter-increment:step;font-family:var(--mono);font-weight:700;color:var(--brick);font-size:15px;padding-top:1px}
+  .step .num::before{content:counter(step,decimal-leading-zero)}
+  .step h3{margin:0 0 4px;font-size:15.5px;font-weight:700}
+  .step p{margin:0;font-size:14px;color:var(--muted);max-width:none}
+  .step .verb{font-family:var(--serif);font-style:italic;color:var(--gold-ink)}
+  .gaps{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:640px){.gaps{grid-template-columns:1fr}}
+  .gap{background:var(--olive-soft);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .gap h3{margin:0 0 5px;font-size:14.5px;font-weight:700;color:var(--olive)}
+  .gap p{margin:0;font-size:13.5px;color:var(--muted);max-width:none}
+  .callout{background:var(--brick-soft);border:1px solid var(--line-strong);border-radius:12px;padding:20px 24px;
+    box-shadow:var(--shadow)}
+  .callout h3{margin:0 0 6px;font-family:var(--serif);font-size:19px;color:var(--brick-ink)}
+  .callout p{margin:0;font-size:15px;color:var(--muted);max-width:none}
+  footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);
+    font-family:var(--mono);font-size:11.5px;color:var(--faint);letter-spacing:.03em;line-height:1.7}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 9px;border-radius:20px;
+    background:var(--gold-soft);color:var(--gold-ink);font-weight:600;letter-spacing:.05em}
+</style>
+
+<div class="wrap">
+<div class="col">
+
+  <header>
+    <p class="eyebrow">GetHook Ad Intelligence · Competitive Field Report</p>
+    <h1>Bioroot Labs. <em>“You didn't fail turmeric”</em></h1>
+    <p class="dek">Every messaging building block in Bioroot Labs' live ad library — a single turmeric-curcumin joint-pain supplement sold almost entirely through one reframe — deduplicated and split across eight layers.</p>
+    <div class="meta">
+      <span><b>98</b> video ads scraped</span>
+      <span><b>190</b> messaging elements</span>
+      <span><b>8</b> layers</span>
+      <span><b>0</b> fidelity failures</span>
+      <span>Method: <b>8-layer blueprint v1</b></span>
+    </div>
+  </header>
+
+  <div class="tiles">
+    <div class="tile"><div class="n">95%</div><div class="l">curcuminoids — the dose claim that separates it from “2–6%” store turmeric (35 ads)</div></div>
+    <div class="tile"><div class="n">2,000%</div><div class="l">the black-pepper absorption number repeated in nearly every ad</div></div>
+    <div class="tile"><div class="n">1 VSL</div><div class="l">one core story (“I figured out why turmeric wasn't working”) run in dozens of variants</div></div>
+    <div class="tile"><div class="n">52→90</div><div class="l">the signature pain line: <b>“I was 52, but I felt like I was 90”</b> (8 ads)</div></div>
+  </div>
+
+  <section>
+    <p class="kicker">The strategic thesis</p>
+    <div class="thesis">
+      Bioroot doesn't sell turmeric — it sells a <b>reframe of your past failure</b>: “you already tried turmeric and it did nothing, and here's why.” Regular powder is only 2–3% curcumin and 90% passes through you, so the fix is a <b>95% extract + black pepper + MCT oil</b> — the three things the cheap stuff lacks. The enemies are stacked and specific: <span class="en">cheap Amazon turmeric</span>, <span class="en">ibuprofen/NSAIDs</span>, <span class="en">methotrexate</span>, <span class="en">knee surgery</span>. The proof is always the same image — <em>“just me moving like a normal person again”</em> — and the close is a small-batch scarcity + buy-two-get-one + money-back guarantee.
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">The defining pattern</p>
+    <div class="callout">
+      <h3>One story, brute-forced across every avatar</h3>
+      <p>This account's real strategy isn't angle variety — it's <b>replication</b>. A single flagship VSL (a ~52-year-old woman with rheumatoid arthritis who refuses methotrexate, discovers 95% curcumin, and ends up walking safaris in Africa) is re-shot as a male construction worker, a UK builder, a 3rd-person “Mike &amp; Sarah” narrative, a doctor-reaction duet, a cheating-husband musical, and even a Welsh-language dub. The messaging spine barely moves; only the messenger does.</p>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer inventory</p>
+    <h2>The eight layers, by volume</h2>
+    <p class="lede">Distinct, deduplicated elements per layer, with the highest-coverage exemplar.</p>
+    <div class="layers">
+      <div class="layer"><div class="top"><span class="name">1 · Hook</span><span class="cnt">56 distinct</span></div><div class="ex">This was me six months ago, holding onto furniture to walk across my living room</div></div>
+      <div class="layer"><div class="top"><span class="name">2 · Angle</span><span class="cnt">98 ads → ~15 families</span></div><div class="ex">Mostly one core VSL, re-lensed</div></div>
+      <div class="layer"><div class="top"><span class="name">3 · Unique mechanism</span><span class="cnt">9 distinct</span></div><div class="ex">Ibuprofen masks the pain. Curcumin reduces the inflammatory enzymes at the source</div></div>
+      <div class="layer"><div class="top"><span class="name">4 · CTA</span><span class="cnt">7 distinct</span></div><div class="ex">If it's in stock, grab it… I never filled that prescription and I never will</div></div>
+      <div class="layer"><div class="top"><span class="name">5 · Avatar</span><span class="cnt">8 distinct</span></div><div class="ex">can't pick up your grandkids, can't kneel in the garden</div></div>
+      <div class="layer"><div class="top"><span class="name">6 · Problem</span><span class="cnt">8 distinct</span></div><div class="ex">I was 52 years old, but I felt like I was 90</div></div>
+      <div class="layer"><div class="top"><span class="name">7 · Desire</span><span class="cnt">7 distinct</span></div><div class="ex">just me moving like a normal person again</div></div>
+      <div class="layer"><div class="top"><span class="name">8 · Repeated spine</span><span class="cnt">15 distinct</span></div><div class="ex">MCT oil · black pepper extract · 95% curcuminoids</div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 2 · Angle taxonomy</p>
+    <h2>Fifteen ways to tell one story</h2>
+    <p class="lede">Order ≈ how heavily each family is pressed in the scraped set.</p>
+    <div class="tblwrap">
+    <table class="tbl">
+      <thead><tr><th>Angle family</th><th>Ads</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td>Core transformation VSL</td><td class="n">~18</td><td>“Figured out why turmeric wasn't working” — RA/knee pain → 95% extract → walking normally again.</td></tr>
+        <tr><td>“Four signs” inflammation listicle</td><td class="n">~10</td><td>Morning stiffness, ibuprofen-like-candy, can't tie shoes, plan life around pain.</td></tr>
+        <tr><td>Pharmacist / pharma-insider how-to</td><td class="n">~9</td><td>“Here's how to take turmeric right” — dose + black pepper + carrier oil, authority framing.</td></tr>
+        <tr><td>Functional-NP anti-NSAID</td><td class="n">~6</td><td>“Stop taking ibuprofen daily” — COX-1, ulcers, GI bleeds; I made my husband stop.</td></tr>
+        <tr><td>Alcohol / liver vertical</td><td class="n">~6</td><td>A whole second use case — curcumin calms the “inflammation switch” so you can keep drinking.</td></tr>
+        <tr><td>“See my fingers” hands UGC</td><td class="n">~5</td><td>Older woman, arthritis in hands, “there's my fist” — raw testimonial.</td></tr>
+        <tr><td>Supplement tier-list</td><td class="n">~4</td><td>Rate fish oil / glucosamine / ACV 1–10, turmeric done right = a 10.</td></tr>
+        <tr><td>Enemy takedown (“X doesn't fix knees”)</td><td class="n">~3</td><td>Braces, ibuprofen, cortisone, glucosamine all “manage symptoms, not the cause.”</td></tr>
+        <tr><td>Personified narrator</td><td class="n">~3</td><td>“I'm turmeric, and I'm pissed” / “it's me, Chronic Inflammation.”</td></tr>
+        <tr><td>Neuropathy / nerve pain</td><td class="n">~2</td><td>Burning feet = inflamed nerve insulation, not just “age.”</td></tr>
+        <tr><td>RA-autoimmune “trap”</td><td class="n">~2</td><td>Methotrexate vs biologics = choosing “between pain and danger.”</td></tr>
+        <tr><td>Niche symptom hooks</td><td class="n">~3</td><td>Snoring, IBS/gut, “that's not fat it's inflammation” water-retention reframe.</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 8 · The spine</p>
+    <h2>The lines that recur everywhere</h2>
+    <p class="lede">Highest-coverage repeated blocks. Number = ads containing that exact block.</p>
+    <div class="rank">
+      <div class="row"><div class="bar">67<small>ads</small></div><div class="txt"><em>“MCT oil”</em> — the fat-carrier proof point</div></div>
+      <div class="row"><div class="bar">66<small>ads</small></div><div class="txt"><em>“black pepper extract”</em> — the absorption unlock</div></div>
+      <div class="row"><div class="bar">35<small>ads</small></div><div class="txt"><em>“95% curcuminoids”</em> — the dose that beats store turmeric</div></div>
+      <div class="row"><div class="bar">25<small>ads</small></div><div class="txt"><em>“third-party tested”</em> — the purity/no-lead trust line</div></div>
+      <div class="row"><div class="bar">13<small>ads</small></div><div class="txt"><em>“90% passes right through”</em> — why the cheap stuff fails</div></div>
+      <div class="row"><div class="bar">11<small>ads</small></div><div class="txt"><em>“they sell out”</em> — small-batch scarcity engine</div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 3 · Mechanism ladder</p>
+    <h2>The three-part absorption argument</h2>
+    <p class="lede">Every ad rests on the same <span class="pill">3-ingredient thesis</span>: it's not that turmeric doesn't work — it's that you took a version your body can't absorb.</p>
+    <div class="ladder">
+      <div class="step"><div class="num"></div><div><h3>The concentration</h3><p><span class="verb">Problem 1.</span> Store turmeric is 2–3% curcumin; you'd need “50 capsules / 10 teaspoons a day.” Bioroot is a 95% extract, “30× stronger.”</p></div></div>
+      <div class="step"><div class="num"></div><div><h3>The absorption unlock</h3><p><span class="verb">Problem 2.</span> Even good curcumin is barely absorbed — “90% passes right through.” Black pepper extract boosts absorption “up to 2,000%.”</p></div></div>
+      <div class="step"><div class="num"></div><div><h3>The fat carrier</h3><p><span class="verb">Problem 3.</span> Curcumin is fat-soluble; “without fat it can't get into your cells.” MCT oil is the delivery vehicle — the reason the powder failed.</p></div></div>
+      <div class="step"><div class="num"></div><div><h3>The enemy contrast</h3><p><span class="verb">The pivot.</span> “Ibuprofen masks the pain; curcumin reduces the inflammatory enzymes at the source” — plus ginger/B-propolis/vitamin C so “it doesn't tear up your stomach.”</p></div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 4 · the offer & enemies</p>
+    <h2>Offer & enemy architecture</h2>
+    <div class="tblwrap">
+    <table class="tbl">
+      <thead><tr><th>Component</th><th>How it shows up</th></tr></thead>
+      <tbody>
+        <tr><td>Offer</td><td>Buy two, get one free · 60-day (sometimes 90-day) money-back guarantee · free shipping</td></tr>
+        <tr><td>Scarcity</td><td>“Small, independent company,” “they sell out constantly because they won't cut corners,” “if the cart button shows, hurry”</td></tr>
+        <tr><td>Named enemies</td><td>Cheap Amazon/store turmeric (2–6%) · ibuprofen & NSAIDs (ulcers, kidneys) · methotrexate/Enbrel/biologics (liver, immune) · knee replacement · cortisone shots · glucosamine</td></tr>
+        <tr><td>Authority</td><td>“Pharmacist,” “functional NP,” “30-year rheumatologist,” “daughter who's a nurse,” Arthritis Foundation / Journal of Medicinal Food / University of Miami study</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Whitespace</p>
+    <h2>What they're <em>not</em> testing</h2>
+    <p class="lede">Gaps in the current library.</p>
+    <div class="gaps">
+      <div class="gap"><h3>Genuine angle diversity</h3><p>The account is replication-heavy. Fresh non-arthritis use cases (workout recovery, brain/focus, skin) are barely touched.</p></div>
+      <div class="gap"><h3>Younger / athletic avatar</h3><p>Almost everything is 50–67 arthritis. The “train hard, recover faster” 30s–40s frame is wide open.</p></div>
+      <div class="gap"><h3>Subscription / daily-ritual</h3><p>All one-off buy-2-get-1; no auto-replenish despite a “water, capsule, relief, repeat” daily product.</p></div>
+      <div class="gap"><h3>Female-buyer for a partner</h3><p>Wife-of-sufferer appears inside stories but never as the direct “buy it for him” purchaser.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    Bioroot Labs · brand_id 51 · 98 ads · 190 deduplicated messaging elements across 8 layers · 0 fidelity failures.<br>
+    Generated by the deterministic 8-layer blueprint builder (docs/messaging-blueprint-methodology.md). Verbatim everywhere except Angle. Coverage auto-computed against source transcripts.<br>
+    GetHook Ad Intelligence — competitive teardown, not affiliated with Bioroot Labs.
+  </footer>
+
+</div>
+</div>

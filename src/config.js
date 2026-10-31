@@ -10,12 +10,12 @@
  */
 
 module.exports = {
-  maxAds: 120,
+  maxAds: 100,
 
   filters: {
     // Empty = no constraint on that dimension (see src/scraper/filters.js).
-    country: '',
-    language: '',
+    country: 'US',
+    language: 'en',
     format: 'video',
     // Sort order for the ad list. Empty = leave GetHook's default sort, which
     // is "Most impressions" — so an empty value already gives impressions-first

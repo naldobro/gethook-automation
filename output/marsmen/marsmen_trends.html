@@ -1,0 +1,293 @@
+<title>MarsMen — 8-Layer Messaging Teardown</title>
+<style>
+  :root{
+    --ground:#F4EFE8; --panel:#FFFFFF; --panel-2:#F1EAE0;
+    --ink:#1C1714; --muted:#6A5F55; --faint:#9A8C7E;
+    --line:#E3D9CC; --line-strong:#CDBFAD;
+    --rust:#B5451F; --rust-soft:#F3DDD0; --rust-ink:#8A2F13;
+    --iron:#3F4B57; --iron-soft:#E2E6EA;
+    --gold:#9C6B1E; --gold-soft:#F1E4CB;
+    --good:#2F6B42; --good-soft:#DDEBE0;
+    --shadow:0 1px 2px rgba(28,23,20,.05),0 10px 30px rgba(28,23,20,.06);
+    --serif:Georgia,"Iowan Old Style","Times New Roman",serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ground:#161311; --panel:#201B18; --panel-2:#2A2320;
+      --ink:#F1E9E0; --muted:#B3A596; --faint:#7E7264;
+      --line:#332A24; --line-strong:#463A31;
+      --rust:#E4703F; --rust-soft:#3A241B; --rust-ink:#F0A07C;
+      --iron:#8FA3B4; --iron-soft:#232C33;
+      --gold:#D6A24A; --gold-soft:#322613;
+      --good:#6FB183; --good-soft:#1E2E23;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#161311; --panel:#201B18; --panel-2:#2A2320;
+    --ink:#F1E9E0; --muted:#B3A596; --faint:#7E7264;
+    --line:#332A24; --line-strong:#463A31;
+    --rust:#E4703F; --rust-soft:#3A241B; --rust-ink:#F0A07C;
+    --iron:#8FA3B4; --iron-soft:#232C33;
+    --gold:#D6A24A; --gold-soft:#322613;
+    --good:#6FB183; --good-soft:#1E2E23;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 12px 34px rgba(0,0,0,.4);
+  }
+  :root[data-theme="light"]{
+    --ground:#F4EFE8; --panel:#FFFFFF; --panel-2:#F1EAE0;
+    --ink:#1C1714; --muted:#6A5F55; --faint:#9A8C7E;
+    --line:#E3D9CC; --line-strong:#CDBFAD;
+    --rust:#B5451F; --rust-soft:#F3DDD0; --rust-ink:#8A2F13;
+    --iron:#3F4B57; --iron-soft:#E2E6EA;
+    --gold:#9C6B1E; --gold-soft:#F1E4CB;
+    --good:#2F6B42; --good-soft:#DDEBE0;
+    --shadow:0 1px 2px rgba(28,23,20,.05),0 10px 30px rgba(28,23,20,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0}
+  .wrap{background:var(--ground);color:var(--ink);font-family:var(--sans);
+    line-height:1.6;-webkit-font-smoothing:antialiased;padding:0 20px 80px}
+  .col{max-width:920px;margin:0 auto}
+  /* header */
+  header{padding:64px 0 30px;border-bottom:2px solid var(--ink)}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--rust);font-weight:600;margin:0 0 18px}
+  h1{font-family:var(--sans);font-weight:800;letter-spacing:-.02em;line-height:1.02;
+    font-size:clamp(38px,7vw,72px);margin:0;text-wrap:balance}
+  h1 .amp{color:var(--rust)}
+  .dek{font-family:var(--serif);font-size:clamp(17px,2.4vw,21px);color:var(--muted);
+    max-width:64ch;margin:22px 0 0;line-height:1.5}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:26px;font-family:var(--mono);
+    font-size:12px;color:var(--faint);letter-spacing:.04em}
+  .meta b{color:var(--muted);font-weight:600}
+  /* tiles */
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:34px 0 10px}
+  @media(max-width:640px){.tiles{grid-template-columns:repeat(2,1fr)}}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px 16px;
+    box-shadow:var(--shadow)}
+  .tile .n{font-size:34px;font-weight:800;letter-spacing:-.03em;font-variant-numeric:tabular-nums;
+    line-height:1;color:var(--rust)}
+  .tile .l{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.35}
+  /* sections */
+  section{padding:44px 0 6px}
+  .kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--gold);font-weight:600;margin:0 0 10px}
+  h2{font-size:clamp(24px,3.6vw,32px);font-weight:800;letter-spacing:-.02em;margin:0 0 6px;text-wrap:balance}
+  .lede{font-family:var(--serif);color:var(--muted);font-size:17px;max-width:66ch;margin:6px 0 24px}
+  p{max-width:70ch}
+  /* thesis callout */
+  .thesis{background:var(--panel);border:1px solid var(--line-strong);border-left:4px solid var(--rust);
+    border-radius:12px;padding:24px 26px;box-shadow:var(--shadow);font-family:var(--serif);
+    font-size:18.5px;line-height:1.55;color:var(--ink)}
+  .thesis b{font-family:var(--sans);font-weight:700;background:var(--rust-soft);color:var(--rust-ink);
+    padding:1px 6px;border-radius:5px}
+  /* layer grid */
+  .layers{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:640px){.layers{grid-template-columns:1fr}}
+  .layer{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:16px 18px;
+    box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px}
+  .layer .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .layer .name{font-weight:700;font-size:15.5px}
+  .layer .cnt{font-family:var(--mono);font-size:12px;color:var(--rust);font-weight:600;
+    background:var(--rust-soft);padding:2px 8px;border-radius:20px;white-space:nowrap}
+  .layer .ex{font-family:var(--serif);font-size:14px;color:var(--muted);line-height:1.45}
+  .layer .ex::before{content:"“"}.layer .ex::after{content:"”"}
+  /* ranked list */
+  .rank{display:flex;flex-direction:column;gap:0;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  .row{display:grid;grid-template-columns:56px 1fr;gap:14px;padding:13px 18px;align-items:center;
+    border-top:1px solid var(--line)}
+  .row:first-child{border-top:none}
+  .row .bar{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;
+    color:var(--rust);text-align:right}
+  .row .bar small{color:var(--faint);font-weight:400;font-size:10.5px;display:block;letter-spacing:.05em}
+  .row .txt{font-size:14.5px}
+  .row .txt em{font-family:var(--serif);font-style:italic;color:var(--muted)}
+  /* families table */
+  .tbl{width:100%;border-collapse:collapse;font-size:14.5px;background:var(--panel);
+    border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:var(--shadow)}
+  .tblwrap{overflow-x:auto}
+  .tbl th{text-align:left;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);font-weight:600;padding:14px 16px;border-bottom:1px solid var(--line-strong)}
+  .tbl td{padding:12px 16px;border-top:1px solid var(--line);vertical-align:top}
+  .tbl td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--rust);font-weight:700;white-space:nowrap}
+  .tbl tr td:first-child{font-weight:700}
+  /* ladder */
+  .ladder{display:flex;flex-direction:column;gap:10px;counter-reset:step}
+  .step{display:grid;grid-template-columns:34px 1fr;gap:16px;background:var(--panel);border:1px solid var(--line);
+    border-radius:12px;padding:16px 18px;box-shadow:var(--shadow)}
+  .step .num{counter-increment:step;font-family:var(--mono);font-weight:700;color:var(--iron);
+    font-size:15px;padding-top:1px}
+  .step .num::before{content:counter(step,decimal-leading-zero)}
+  .step h3{margin:0 0 4px;font-size:15.5px;font-weight:700}
+  .step p{margin:0;font-size:14px;color:var(--muted);max-width:none}
+  .step .verb{font-family:var(--serif);font-style:italic;color:var(--rust-ink)}
+  /* whitespace cards */
+  .gaps{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:640px){.gaps{grid-template-columns:1fr}}
+  .gap{background:var(--iron-soft);border:1px solid var(--line);border-radius:12px;padding:16px 18px}
+  .gap h3{margin:0 0 5px;font-size:14.5px;font-weight:700;color:var(--iron)}
+  .gap p{margin:0;font-size:13.5px;color:var(--muted);max-width:none}
+  footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);
+    font-family:var(--mono);font-size:11.5px;color:var(--faint);letter-spacing:.03em;line-height:1.7}
+  .pill{display:inline-block;font-family:var(--mono);font-size:11px;padding:2px 9px;border-radius:20px;
+    background:var(--gold-soft);color:var(--gold);font-weight:600;letter-spacing:.05em}
+</style>
+
+<div class="wrap">
+<div class="col">
+
+  <header>
+    <p class="eyebrow">GetHook Ad Intelligence · Competitive Field Report</p>
+    <h1>MarsMen<span class="amp">.</span> The natural-TRT persuasion engine</h1>
+    <p class="dek">Every messaging building block in MarsMen's live video ad library, deduplicated and split across eight layers — a map of exactly what this brand has tested to sell men a testosterone booster as the way off the needle.</p>
+    <div class="meta">
+      <span><b>97</b> video ads scraped</span>
+      <span><b>237</b> messaging elements</span>
+      <span><b>8</b> layers</span>
+      <span><b>0</b> fidelity failures</span>
+      <span>Method: <b>8-layer blueprint v1</b></span>
+    </div>
+  </header>
+
+  <div class="tiles">
+    <div class="tile"><div class="n">29</div><div class="l">ads carry the <b>“50% off for life”</b> offer — the single most-repeated line in the account</div></div>
+    <div class="tile"><div class="n">16</div><div class="l">ads lean on the <b>90-day money-back guarantee</b> as the risk-reversal</div></div>
+    <div class="tile"><div class="n">~9</div><div class="l">distinct <b>angle families</b> rotating over one fixed core argument</div></div>
+    <div class="tile"><div class="n">1</div><div class="l">product, one villain set: <b>TRT + cortisol + estrogen + SHBG</b></div></div>
+  </div>
+
+  <section>
+    <p class="kicker">The strategic thesis</p>
+    <div class="thesis">
+      MarsMen runs a single engine across all 97 ads: sell a natural test-booster as the <b>escape from TRT dependency</b>. The fear is always the needle — <em>“once you start, your balls stop producing forever”</em> — the credibility is always <b>clinical dosing</b> vs “criminally underdosed” Amazon “fraud,” the proof is always a <b>testosterone number jumping</b> (217→564, 298→847, 300→900), and the close is always the same <b>risk-free 50%-off-for-life</b> offer. What rotates is only the <em>lens</em>: the dad at the pool, the wife's POV, the street quiz, the personified cortisol villain.
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer inventory</p>
+    <h2>The eight layers, by volume</h2>
+    <p class="lede">How many distinct, deduplicated elements MarsMen has tested in each layer — with the single highest-coverage element as the exemplar.</p>
+    <div class="layers">
+      <div class="layer"><div class="top"><span class="name">1 · Hook</span><span class="cnt">70 distinct</span></div><div class="ex">Yo, I was 36… at 217 and terrified to start TRT</div></div>
+      <div class="layer"><div class="top"><span class="name">2 · Angle</span><span class="cnt">97 ads → ~9 families</span></div><div class="ex">One reason per ad; the same core argument re-lensed</div></div>
+      <div class="layer"><div class="top"><span class="name">3 · Unique mechanism</span><span class="cnt">15 distinct</span></div><div class="ex">a protein called SHBG that literally locks it up so you can't use it</div></div>
+      <div class="layer"><div class="top"><span class="name">4 · CTA</span><span class="cnt">11 distinct</span></div><div class="ex">There's a 90-day money-back guarantee. You have no risk in this whatsoever</div></div>
+      <div class="layer"><div class="top"><span class="name">5 · Avatar</span><span class="cnt">11 distinct</span></div><div class="ex">men start losing testosterone around age 30</div></div>
+      <div class="layer"><div class="top"><span class="name">6 · Problem</span><span class="cnt">11 distinct</span></div><div class="ex">Belly fat that won't budge? Red flag. No morning wood? Red flag.</div></div>
+      <div class="layer"><div class="top"><span class="name">7 · Desire</span><span class="cnt">9 distinct</span></div><div class="ex">It's time you get your mojo back, big dog</div></div>
+      <div class="layer"><div class="top"><span class="name">8 · Repeated spine</span><span class="cnt">15 distinct</span></div><div class="ex">Most testosterone supplements are criminally underdosed</div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 2 · Angle taxonomy</p>
+    <h2>Nine ways to sell one argument</h2>
+    <p class="lede">The 97 ads collapse into a handful of repeatable angle families. Order ≈ how heavily each is being pressed (by ad count in the scraped set).</p>
+    <div class="tblwrap">
+    <table class="tbl">
+      <thead><tr><th>Angle family</th><th>Ads</th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td>Anti-TRT / anti-dependency</td><td class="n">~18</td><td>“Before you start injections, try this” — the needle shuts your body down forever; MarsMen restarts it.</td></tr>
+        <tr><td>Underdosing = fraud</td><td class="n">~8</td><td>Cheap Amazon boosters use 50mg not 1,000mg, hide it in proprietary blends — “it's basically fraud.”</td></tr>
+        <tr><td>Number-transformation testimonial</td><td class="n">~10</td><td>A blood-test figure jumps (298→847, 300→900); Matthew Bickle (lost 200 lbs) recurs as the hero.</td></tr>
+        <tr><td>Dad-bod / man-boobs / belly</td><td class="n">~12</td><td>Estrogen + cortisol store fat on the chest and gut; you can't train off a hormone problem.</td></tr>
+        <tr><td>Mechanism explainer (cortisol / SHBG / estrogen)</td><td class="n">~9</td><td>Names a hidden villain and its fix — the “money in the bank, debit card doesn't work” SHBG trap.</td></tr>
+        <tr><td>Wife / girlfriend POV</td><td class="n">~4</td><td>“What did you give my husband?” — partner narrates the transformation (bedroom + mood).</td></tr>
+        <tr><td>Street interview / quiz</td><td class="n">~3</td><td>$200–$300 man-on-the-street men's-health quiz; nobody knows the ingredients → reveal.</td></tr>
+        <tr><td>Ingredient personification</td><td class="n">~3</td><td>“I'm Zinc… I'm Boron…” and “I'm high cortisol” — the compounds/villains speak.</td></tr>
+        <tr><td>Offer / scarcity / reverse-psychology</td><td class="n">~10</td><td>“Please stop using our discount,” “I'm returning this ASAP,” “67% off,” “don't buy on Amazon.”</td></tr>
+        <tr><td>GLP-1 / Ozempic combo</td><td class="n">~2</td><td>Ozempic strips muscle & drive; stack MarsMen to keep them while you cut.</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 8 · The spine</p>
+    <h2>The lines that recur everywhere</h2>
+    <p class="lede">Highest-coverage repeated blocks — the reusable phrases MarsMen bolts onto almost every creative. Number = ads containing that exact block.</p>
+    <div class="rank">
+      <div class="row"><div class="bar">29<small>ads</small></div><div class="txt"><em>“50% off for life”</em> — the offer, stated identically across the account</div></div>
+      <div class="row"><div class="bar">16<small>ads</small></div><div class="txt"><em>“90-day money-back guarantee”</em> — the risk-reversal spine</div></div>
+      <div class="row"><div class="bar">11<small>ads</small></div><div class="txt"><em>“Shilajit at 400 milligrams”</em> — clinical-dose proof line</div></div>
+      <div class="row"><div class="bar">5<small>ads</small></div><div class="txt"><em>“Tonkat Ali at 1,000 milligrams”</em> — the flagship dose vs 50mg competitors</div></div>
+      <div class="row"><div class="bar">5<small>ads</small></div><div class="txt"><em>“Over 121,000 men”</em> — headline social-proof count (also 420k / 429,576 variants)</div></div>
+      <div class="row"><div class="bar">3<small>ads</small></div><div class="txt"><em>“Most testosterone supplements are criminally underdosed”</em> → <em>“it's basically fraud”</em></div></div>
+      <div class="row"><div class="bar">3<small>ads</small></div><div class="txt"><em>“91% of men”</em> report higher energy / replaced their whole stack</div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 3 · Mechanism ladder</p>
+    <h2>The science stack they lean on</h2>
+    <p class="lede">MarsMen doesn't argue “more testosterone.” It argues a <span class="pill">4-part system</span>: make it, keep it, protect it, use it — each with a named villain and a named ingredient.</p>
+    <div class="ladder">
+      <div class="step"><div class="num"></div><div><h3>The TRT shutdown</h3><p><span class="verb">Villain: the needle.</span> “Once you inject, your body forgets how to make testosterone” — the HPTA axis goes dormant (thermostat / space-heater / furnace analogy). MarsMen <em>restarts the factory</em> instead of replacing it.</p></div></div>
+      <div class="step"><div class="num"></div><div><h3>The SHBG trap</h3><p><span class="verb">Villain: bound testosterone.</span> “Money in the bank but your debit card doesn't work.” Boron frees locked T so what you already make becomes usable.</p></div></div>
+      <div class="step"><div class="num"></div><div><h3>Estrogen conversion</h3><p><span class="verb">Villain: aromatase.</span> As T drops, estrogen rises and routes fat to the chest & gut (moobs, dad bod). Tongkat Ali blocks the enzyme; Boron drops excess estrogen.</p></div></div>
+      <div class="step"><div class="num"></div><div><h3>Cortisol theft</h3><p><span class="verb">Villain: stress hormone.</span> High cortisol steals T, bloats the face, wrecks sleep. Restore T → cortisol falls → the body “stops working against you.”</p></div></div>
+      <div class="step"><div class="num"></div><div><h3>Clinical dosing as proof</h3><p><span class="verb">Villain: the competitor.</span> 1,000mg Tongkat / 400mg Shilajit “not 50mg,” third-party tested, made in USA, no proprietary blends — dosing is the credibility engine.</p></div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layers 4 & the offer</p>
+    <h2>Offer architecture</h2>
+    <p class="lede">Every close funnels to one stacked offer, delivered through interchangeable risk-reversal phrasings.</p>
+    <div class="tblwrap">
+    <table class="tbl">
+      <thead><tr><th>Component</th><th>How it shows up</th></tr></thead>
+      <tbody>
+        <tr><td>Price</td><td>“50% off for life” (subscription, locked in) · escalated pushes at 60% / 67% off · anchored against $118 → $39 and $175/mo of separate ingredients</td></tr>
+        <tr><td>Guarantee</td><td>“90-day money-back / higher-T guarantee” · “worst case, you feel nothing and get your money back” · “what's the risk?”</td></tr>
+        <tr><td>Sweeteners</td><td>Free shipping · three free gifts · “also on Amazon” but cheaper direct</td></tr>
+        <tr><td>Urgency</td><td>“selling out faster than we can ship,” “limited batches,” “deal expires tonight,” “don't buy on Amazon”</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 1 · Hook archetypes</p>
+    <h2>How they open</h2>
+    <p class="lede">70 distinct hooks, but they cluster into recognizable openers — the pattern interrupt is almost always a threat, a confession, or a shock.</p>
+    <div class="tblwrap">
+    <table class="tbl">
+      <thead><tr><th>Archetype</th><th>Example opener</th></tr></thead>
+      <tbody>
+        <tr><td>Pre-emptive warning</td><td>“Before you start TRT injections, try this.”</td></tr>
+        <tr><td>Insider secret</td><td>“TRT clinics won't tell you this, but once you start, your balls shrink forever.”</td></tr>
+        <tr><td>Confessional number</td><td>“My testosterone went from 298 to 847 without a single injection.”</td></tr>
+        <tr><td>Symptom checklist</td><td>“Red flags of low testosterone in men…”</td></tr>
+        <tr><td>Shock / crude</td><td>“Has your girlfriend ever… and thought, these are getting a little small?”</td></tr>
+        <tr><td>Reverse psychology</td><td>“The problem with Mars Men — it works too well.” / “I'm returning this ASAP.”</td></tr>
+        <tr><td>Enemy call-out</td><td>“If you're still taking those cheap boosters from Amazon, we need to talk.”</td></tr>
+        <tr><td>Story cold-open</td><td>“A random guy in a restaurant bathroom changed my perspective on testosterone.”</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Whitespace</p>
+    <h2>What they're <em>not</em> testing</h2>
+    <p class="lede">Gaps in the current library — angles a competitor (or MarsMen itself) could open up.</p>
+    <div class="gaps">
+      <div class="gap"><h3>Female-buyer / gifting</h3><p>Wife-POV exists but only as narration. No ad sells her directly as the purchaser (“buy it for him”).</p></div>
+      <div class="gap"><h3>Sleep & recovery lead</h3><p>Sleep is a supporting benefit, never the headline promise — untested as a primary angle.</p></div>
+      <div class="gap"><h3>Younger avatar (25–32)</h3><p>Nearly everything targets 35–54. The “early prevention” frame for younger men is largely open.</p></div>
+      <div class="gap"><h3>Ingredient-origin / sourcing story</h3><p>Doses are proven, but there's no provenance narrative (where the Tongkat/Shilajit comes from, purity story).</p></div>
+    </div>
+  </section>
+
+  <footer>
+    MarsMen · brand_id 53 · 97 ads · 237 deduplicated messaging elements across 8 layers · 0 fidelity failures.<br>
+    Generated by the deterministic 8-layer blueprint builder (docs/messaging-blueprint-methodology.md). Verbatim everywhere except Angle. Coverage auto-computed against source transcripts.<br>
+    GetHook Ad Intelligence — competitive teardown, not affiliated with MarsMen.
+  </footer>
+
+</div>
+</div>

@@ -7,6 +7,15 @@ Validated on **Kelle Skin** (brand_id 23, 121 scripts → 602 elements, 0 fideli
 
 ---
 
+## ⚠️ TRIGGER — read this ENTIRE document before any "8-part / 8-layer blueprint" request
+When the user asks for an **8-part blueprint / 8-layer blueprint** (any wording), you MUST read THIS WHOLE document line by line BEFORE starting, and run the analysis on **these rules ONLY** — not generic marketing knowledge, not the web. First reply with either:
+- **"I've read the whole methodology and will follow every line"**, or
+- an explicit list of any rule you intend to skip or can't follow, so the user can approve or correct it.
+
+Never start the analysis without this confirmation. Never skip a rule silently. The two most-violated rules: (1) **Angle is ad-specific, Unique mechanism is brand-specific** — if a message recurs across the brand's ads it is a UM, not 99 one-off angles; (2) **read every transcript line by line** — no shortcuts, no skimming.
+
+---
+
 ## When to use
 The user asks for a "messaging playbook / blueprint / mind-map" of a brand — what hooks/angles/mechanisms/CTAs/etc. it has tested, deduplicated, with source references. Not a themes summary; a **structured inventory of tested messaging**.
 
@@ -17,9 +26,18 @@ The brand's ads must already be in Supabase (`ads` rows under its `brand_id`) **
 
 ## The 8 layers
 
-1. **Hook** — the opening line(s). Ads usually label them `Hook 1/2/3`; each distinct hook = one entry. For formats with no labeled hook (static, animation, VSL), use the opening line and note `no labeled hook`.
-2. **Angle** — the ad's single **strongest reason/purpose** (persona lens, belief being moved, core argument). **One per ad.** Short label — a few words, NOT a paragraph. *This is the ONLY layer written in your own words.*
-3. **Unique mechanism** — the "why it works" explanation, **full verbatim passage** (not a topic name).
+1. **Hook** — the opening **3–5 seconds** of the ad = roughly the **first 12–20 words (20 MAX)**, cut on a sentence boundary. Captured **verbatim**. If GetHook exposes labeled `Hook 1/2/3` variants, each distinct one = one entry; otherwise the opening words ARE the hook. Every ad has a hook.
+2. **Angle** — the **single biggest reason/purpose THIS specific ad exists to sell**: the premise / story / argument this one ad is built on. **AD-SPECIFIC — this is the core test.** An angle belongs to one ad's premise; if the same message recurs across the brand's ads it is NOT an angle, it's the Unique Mechanism. Written in **our own words** (the only interpretive layer). Decide it only **after reading the WHOLE ad** — it's subjective, so think.
+   - *Example (garlic ED brand):* angle = "Ancient Hebrew tradition knew garlic kept men sexually capable into old age; modern medicine forgot it" (built into THIS ad only). The "ED is hardened arterial walls, aged garlic softens them" science is NOT the angle — it recurs in every ad → that's the UM.
+   - **One PRIMARY angle per ad.** A plausible second angle goes in a **separate `Angle (candidate)` row** — never crammed into the primary.
+   - **Candidate angles must be reviewed and resolved.** Every candidate you drop STAYS in the CSV as an `Angle (candidate)` row with the **reason removed in the `note` column** (e.g. "this is the brand UM — recurs across ads", "duplicate of angle X", "weaker than primary"). Nothing deleted silently — clean + auditable.
+   - **Merge** ads whose angle is ~85%+ the same into one row (list all IDs).
+   - **Offer/sale ads:** don't lazily label every sale ad "discount". First dig for the real *reason the ad exists* — "we overproduced, selling the extras cheap", "editor misprinted 65%→75% off so we're honoring it", "warehouse overstock". That's the angle. Only when there's genuinely no premise beyond the deal is the angle the offer itself (then many such ads merge into one).
+3. **Unique mechanism** — the brand's **unique/scientific explanation or reasoning** for why something happens or why the product works. **BRAND-SPECIFIC — it recurs across the brand's ads, and that recurrence is how you tell it from an Angle.** Full **verbatim** passage. **More than one UM per brand is normal** — they can be:
+   - **solution-specific:** root cause + the science of how the product fixes it (e.g. "ED is hardened arterial walls; aged garlic's S-allylcysteine softens them");
+   - **problem-specific:** the mechanism of the *problem* (e.g. "normal toothbrushes shed microplastics → what they do inside your body"; "fiber adds bulk to stool — fine normally, but when you're constipated it's like adding more cars to a traffic jam");
+   - any brand-level reasoning/analogy that explains a cause or an effect.
+   A bare **feature/spec list** ("wide toe box, fur lining, waterproof, grip") is **NOT a UM** — it names features without explaining a cause/effect. Test each passage: *does it explain WHY/HOW?* If no, it's not a UM.
 4. **CTA** — the actual close / call-to-action / risk-reversal, **full verbatim**. (A bare guarantee mention is a data point, not the CTA — capture the whole closing block.)
 5. **Avatar** — who's targeted (persona/segment). Mix of verbatim descriptors + short persona labels.
 6. **Problem** — every ICP problem/roadblock called out, **verbatim** (words or full sentences).
@@ -27,11 +45,14 @@ The brand's ads must already be in Supabase (`ads` rows under its `brand_id`) **
 8. **Repeated messaging** — blocks that recur across 3+ ads (near-verbatim), representing the reusable "spine."
 
 ## Extraction rules (hard-won — follow exactly)
-- **Verbatim everywhere except Angle.** Every non-angle element is exact transcript text. Angle is the only interpretive label. "One wrong word is costly."
+- **Verbatim everywhere except Angle.** Every non-angle element is exact transcript text. Angle (and `Angle (candidate)`) is the only interpretive layer. "One wrong word is costly."
 - **Full messaging, not topic names.** Mechanism/CTA/problem/desire = complete passages, not compacted summaries. (Do NOT reduce "During menopause estrogen drops and testosterone converts to DHT…" to "estrogen→DHT".)
-- **Merge rule:** if two elements are ~85%+ identical, merge into one row (list all script IDs, note the variant). Under that threshold, keep separate.
-- **One angle per ad**, short.
-- **Coverage:** each element lists *every* script that contains it (see auto-coverage below).
+- **Read every line of every transcript — never automate-skip the reading.** The Angle-vs-UM call (ad-specific vs brand-recurring) is made DURING this read, not as a later pass. Think per ad.
+- **Angle = ad-specific; Unique mechanism = brand-specific.** If a message recurs across the brand's ads it's a UM, not an angle. A feature/spec list is never a UM.
+- **Merge rule:** if two elements are ~85%+ identical, merge into one row (list all script IDs, note the variant). Under that threshold, keep separate. **Applies to angles too** — don't spin up a bespoke label per ad when the premise is shared.
+- **One PRIMARY angle per ad**; extra candidates go in `Angle (candidate)` rows, and any dropped candidate keeps its removal reason in `note`.
+- **Every ad must appear in ≥1 Hook row AND ≥1 Angle row** (CTA is NOT compulsory). An ad missing from both means its hook/angle was missed — fix it.
+- **Coverage:** each verbatim element lists *every* script that contains it (auto-computed; see below). It's the "how widely tested" signal; it does NOT apply to Angle labels.
 
 ---
 
@@ -69,9 +90,9 @@ Two modes:
 2. **Create the config:** copy `scripts/blueprint_entries.kelle-skin.js` → `scripts/blueprint_entries.<slug>.js`. Fill in that brand's `dupTitles`, `titleToId` (its ID scheme), `sortKey`, and start an empty `entries` array.
 3. **List titles**, design the ID scheme, and pick a diverse **pilot (~10 scripts)** to lock the taxonomy before doing all.
 4. **Read every line** of each script (never automate-skip the reading). Batch the work (~15–20 scripts per pass) so quality holds.
-5. Per script, add entries: all hooks, one angle label, the full-verbatim mechanism/CTA/problems/desires, avatars, and merge recurring blocks. Shared blocks defined once auto-cover across the brand.
+5. Per script, add entries: the opening-words hook, the ONE primary ad-specific angle (+ any `Angle (candidate)` rows with removal reasons), the full-verbatim brand-level mechanism(s)/CTA/problems/desires, avatars, and merge recurring blocks. While reading each ad, consciously ask "is this message unique to this ad (→ Angle) or does it recur across the brand (→ UM)?" Shared blocks defined once auto-cover across the brand.
 6. **Run the builder** after each batch: `node scripts/build_blueprint.js --brand "<Brand>"`. Fix any anchor that fails verification (0 failures = done).
-7. **Confirm completeness:** every script has an Angle (each script should appear in ≥1 Angle row).
+7. **Confirm completeness:** every script appears in **≥1 Hook row AND ≥1 Angle row** (both compulsory; CTA is not). Any script missing from either = a missed hook/angle to fix.
 8. Deliver `output/<slug>_blueprint.csv`.
 
 *(The builder + rules are fully brand-agnostic; only the per-brand config file — ID scheme, dups, entries — is brand-specific. If a brand needs no custom ID scheme, omit `titleToId` and the raw title is used as the id.)*

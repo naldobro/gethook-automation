@@ -1,0 +1,344 @@
+<title>Kelle × Primal Viking — Messaging Teardown</title>
+<style>
+  :root{
+    --ground:#F4F5F7; --panel:#FFFFFF; --panel-2:#EEF0F3; --panel-3:#E7EAEE;
+    --ink:#161A1F; --muted:#5A626C; --faint:#8A929C; --line:#DDE1E6; --line-2:#CBD2DA;
+    --kelle:#9E4A6E; --kelle-soft:#f2e3ea; --kelle-ink:#7c3455;
+    --pv:#2C6E8F; --pv-soft:#dceaf1; --pv-ink:#1d5069;
+    --gap:#B5791F; --gap-soft:#f6ecd6;
+    --good:#3f7d54;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+    --shadow:0 1px 2px rgba(20,26,31,.05),0 10px 26px rgba(20,26,31,.06);
+  }
+  @media (prefers-color-scheme:dark){:root{
+    --ground:#101319; --panel:#181C23; --panel-2:#1F242C; --panel-3:#252B34;
+    --ink:#E9ECF0; --muted:#9AA3AE; --faint:#697079; --line:#2A303A; --line-2:#39414d;
+    --kelle:#D986A8; --kelle-soft:#2c1e26; --kelle-ink:#e9aec8;
+    --pv:#5FA8CC; --pv-soft:#152a34; --pv-ink:#9dd0e8;
+    --gap:#DBA94B; --gap-soft:#2a2213; --good:#69b487;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px rgba(0,0,0,.4);
+  }}
+  :root[data-theme="dark"]{--ground:#101319;--panel:#181C23;--panel-2:#1F242C;--panel-3:#252B34;--ink:#E9ECF0;--muted:#9AA3AE;--faint:#697079;--line:#2A303A;--line-2:#39414d;--kelle:#D986A8;--kelle-soft:#2c1e26;--kelle-ink:#e9aec8;--pv:#5FA8CC;--pv-soft:#152a34;--pv-ink:#9dd0e8;--gap:#DBA94B;--gap-soft:#2a2213;--good:#69b487;--shadow:0 1px 2px rgba(0,0,0,.3),0 12px 30px rgba(0,0,0,.4);}
+  :root[data-theme="light"]{--ground:#F4F5F7;--panel:#FFFFFF;--panel-2:#EEF0F3;--panel-3:#E7EAEE;--ink:#161A1F;--muted:#5A626C;--faint:#8A929C;--line:#DDE1E6;--line-2:#CBD2DA;--kelle:#9E4A6E;--kelle-soft:#f2e3ea;--kelle-ink:#7c3455;--pv:#2C6E8F;--pv-soft:#dceaf1;--pv-ink:#1d5069;--gap:#B5791F;--gap-soft:#f6ecd6;--good:#3f7d54;--shadow:0 1px 2px rgba(20,26,31,.05),0 10px 26px rgba(20,26,31,.06);}
+
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);line-height:1.55;font-size:15.5px;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1120px;margin:0 auto;padding:clamp(20px,4vw,48px) clamp(14px,4vw,40px) 90px}
+
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:0 0 14px}
+  h1{font-weight:820;letter-spacing:-.022em;line-height:1.02;font-size:clamp(28px,5.5vw,50px);margin:0 0 6px;text-wrap:balance}
+  h1 .k{color:var(--kelle)} h1 .p{color:var(--pv)}
+  .lede{font-family:var(--serif);font-size:clamp(16px,2.2vw,20px);color:var(--muted);max-width:66ch;margin:14px 0 26px;line-height:1.5}
+  .lede b{color:var(--ink);font-weight:600}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .stat{background:var(--panel);padding:14px 16px}
+  .stat .n{font-weight:820;font-size:clamp(20px,3vw,26px);letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .stat .n .s{font-size:.6em;color:var(--faint);font-weight:600}
+  .stat .l{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-top:3px}
+  .legend{display:flex;flex-wrap:wrap;gap:8px 18px;margin:14px 2px 0;font-size:12.5px;color:var(--muted)}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+
+  section{margin-top:54px}
+  .sec-head{display:flex;align-items:baseline;gap:12px;border-bottom:2px solid var(--ink);padding-bottom:10px;margin-bottom:8px}
+  .sec-num{font-family:var(--mono);font-size:13px;color:var(--muted);font-weight:600}
+  h2{font-size:clamp(19px,2.8vw,25px);font-weight:760;letter-spacing:-.015em;margin:0;text-wrap:balance}
+  .thesis{font-family:var(--serif);font-size:16.5px;color:var(--muted);margin:14px 0 20px;max-width:74ch;line-height:1.5}
+
+  /* two-column brand compare */
+  .cmp{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:720px){.cmp{grid-template-columns:1fr}}
+  .brand{border:1px solid var(--line);border-radius:14px;background:var(--panel);box-shadow:var(--shadow);overflow:hidden}
+  .brand.k{border-top:3px solid var(--kelle)} .brand.p{border-top:3px solid var(--pv)}
+  .brand h3{margin:0;padding:13px 18px;font-size:14px;font-weight:750;display:flex;justify-content:space-between;align-items:baseline;border-bottom:1px solid var(--line)}
+  .brand.k h3{color:var(--kelle-ink);background:var(--kelle-soft)}
+  .brand.p h3{color:var(--pv-ink);background:var(--pv-soft)}
+  .brand h3 .meta{font-family:var(--mono);font-size:11px;font-weight:500;color:var(--faint)}
+  .brand .body{padding:14px 18px}
+  ul.clean{margin:0;padding:0;list-style:none;display:grid;gap:8px}
+  ul.clean li{position:relative;padding-left:16px;color:var(--muted);font-size:13.5px;line-height:1.45}
+  ul.clean li::before{content:"";position:absolute;left:1px;top:8px;width:5px;height:5px;border-radius:50%;background:var(--line-2)}
+  .brand.k ul.clean li::before{background:var(--kelle)} .brand.p ul.clean li::before{background:var(--pv)}
+  ul.clean li b{color:var(--ink);font-weight:650}
+  .q{font-family:var(--serif);color:var(--ink);font-style:italic}
+  .cnt{font-family:var(--mono);font-size:11px;color:var(--faint);font-variant-numeric:tabular-nums}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 20px;box-shadow:var(--shadow)}
+
+  /* shared plays table */
+  .tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px}
+  table{border-collapse:collapse;width:100%;min-width:640px;font-size:13.5px}
+  th,td{text-align:left;padding:11px 15px;border-bottom:1px solid var(--line);vertical-align:top}
+  thead th{font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--faint);background:var(--panel-2);font-weight:600;position:sticky;top:0}
+  thead th.kc{color:var(--kelle-ink)} thead th.pc{color:var(--pv-ink)}
+  tbody tr:last-child td{border-bottom:0}
+  td.play{font-weight:650;color:var(--ink);width:22%}
+  td.kv{color:var(--muted)} td.pv{color:var(--muted)}
+  tbody tr:hover{background:var(--panel-2)}
+
+  /* ranked gap cards */
+  .gaps{display:grid;gap:12px}
+  .gap{display:grid;grid-template-columns:auto 1fr;gap:14px;background:var(--panel);border:1px solid var(--line);border-left:3px solid var(--pv);border-radius:12px;padding:15px 18px;box-shadow:var(--shadow)}
+  .gap .rank{font-family:var(--mono);font-weight:700;font-size:18px;color:var(--pv);line-height:1;padding-top:2px}
+  .gap h4{margin:0 0 4px;font-size:15px;font-weight:720}
+  .gap p{margin:0;color:var(--muted);font-size:13.5px}
+  .gap .tag{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.05em;text-transform:uppercase;padding:1px 7px;border-radius:5px;background:var(--pv-soft);color:var(--pv-ink);margin-top:7px}
+  .gap.mine{border-left-color:var(--kelle)} .gap.mine .rank{color:var(--kelle)} .gap.mine .tag{background:var(--kelle-soft);color:var(--kelle-ink)}
+
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:6px}
+  .chip{font-family:var(--mono);font-size:11.5px;padding:4px 9px;border-radius:16px;background:var(--panel-2);border:1px solid var(--line);color:var(--ink)}
+  .chip.k{background:var(--kelle-soft);border-color:transparent;color:var(--kelle-ink)}
+  .chip.p{background:var(--pv-soft);border-color:transparent;color:var(--pv-ink)}
+
+  .callout{border-radius:12px;padding:16px 20px;border:1px solid transparent}
+  .callout.gap{background:var(--gap-soft);border-left:3px solid var(--gap)}
+  .callout h3{margin:0 0 8px;font-size:15px;color:var(--ink)} .callout p{margin:0;color:var(--muted);font-size:14px}
+
+  .bars{display:grid;gap:9px}
+  .bar .lab{font-size:13px;color:var(--ink);margin-bottom:4px}
+  .bar .lab .k{font-family:var(--mono);color:var(--faint);font-size:11px}
+  .bar .track{height:7px;background:var(--panel-2);border-radius:5px;overflow:hidden}
+  .bar .fill{height:100%;border-radius:5px}
+
+  footer{margin-top:64px;padding-top:18px;border-top:1px solid var(--line);font-family:var(--mono);font-size:11.5px;color:var(--faint);display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between}
+
+  @media (prefers-reduced-motion:no-preference){.reveal{opacity:0;transform:translateY(9px);animation:rise .55s ease forwards}@keyframes rise{to{opacity:1;transform:none}}}
+</style>
+
+<div class="wrap">
+  <p class="eyebrow reveal">Competitive Messaging Teardown · GetHook Ad Intelligence</p>
+  <h1 class="reveal"><span class="k">Kelle Skin</span> × <span class="p">Primal Viking</span></h1>
+  <p class="lede reveal">Two DTC brands, opposite avatars — <b>Kelle</b> (menopausal women, facial-hair serum) vs <b>Primal Viking</b> (men 35+, reindeer-organ testosterone). Different products, <b>near-identical playbook</b>. This teardown maps every messaging layer — angles, hooks, mechanisms, offers, avatars, problems, desires — to find what we already share, what they run better, and where the whitespace is. Primal Viking is weighted to its <b>highest-impression ads</b> (PV#1 = top).</p>
+
+  <div class="stats reveal">
+    <div class="stat"><div class="n">121<span class="s"> / 127</span></div><div class="l">Ads · K / PV</div></div>
+    <div class="stat"><div class="n">602<span class="s"> / 232</span></div><div class="l">Elements logged</div></div>
+    <div class="stat"><div class="n">121<span class="s"> / 88</span></div><div class="l">Angles</div></div>
+    <div class="stat"><div class="n">15<span class="s"> / 10</span></div><div class="l">Avatars</div></div>
+    <div class="stat"><div class="n">58<span class="s"> / 26</span></div><div class="l">Mechanisms</div></div>
+    <div class="stat"><div class="n">8<span class="s"> / 7</span></div><div class="l">Repeated blocks</div></div>
+  </div>
+  <div class="legend reveal">
+    <span><span class="dot" style="background:var(--kelle)"></span><b>Kelle Skin</b> — our brand</span>
+    <span><span class="dot" style="background:var(--pv)"></span><b>Primal Viking</b> — competitor</span>
+    <span><span class="dot" style="background:var(--gap)"></span>Whitespace / opportunity</span>
+    <span class="cnt">every quote is verbatim, builder-verified against the ad transcript</span>
+  </div>
+
+  <!-- 0 verdict -->
+  <section>
+    <div class="sec-head"><span class="sec-num">00</span><h2>The one-line verdict</h2></div>
+    <div class="card" style="border-left:3px solid var(--gap)">
+      <p style="margin:0;font-family:var(--serif);font-size:18px;line-height:1.5">Both brands run the <b>same "root-cause reframe" engine</b> — <span style="color:var(--kelle-ink)">"it's not the hair, it's the hormone (DHT)"</span> mirrors <span style="color:var(--pv-ink)">"it's not the fat, it's the hormone (estrogen/low-T)."</span> Where Primal Viking pulls ahead is <b>at the top of the funnel</b>: a famous face, filmed ingredient provenance, a quiz, and relationship-outcome storytelling. Where Kelle pulls ahead is <b>segmentation & objection-handling</b>: 15 sub-avatars and dedicated rebuttal ads.</p>
+    </div>
+  </section>
+
+  <!-- 1 shared -->
+  <section>
+    <div class="sec-head"><span class="sec-num">01</span><h2>What we're BOTH doing (shared architecture)</h2></div>
+    <p class="thesis">Fifteen structural plays appear in both playbooks. Same skeleton, different product on top.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th class="play">Shared play</th><th class="kc">Kelle Skin</th><th class="pc">Primal Viking</th></tr></thead>
+        <tbody>
+          <tr><td class="play">Root-cause reframe</td><td class="kv">"Not the hair — the DHT signal"</td><td class="pv">"Not the fat/food — the hormones"</td></tr>
+          <tr><td class="play">Named-enzyme science</td><td class="kv">5-alpha reductase → DHT</td><td class="pv">aromatase + HPT axis</td></tr>
+          <tr><td class="play">Founder origin story ★</td><td class="kv">Mia &amp; her mum <span class="cnt">(top-ROAS ad)</span></td><td class="pv">Norwegian founder / Røros <span class="cnt">(PV#8,21,55,79,95)</span></td></tr>
+          <tr><td class="play">Personified-villain animation</td><td class="kv">chin / tweezers / razor</td><td class="pv">estrogen / cortisol / microplastic</td></tr>
+          <tr><td class="play">Method scorecard / tier ranking</td><td class="kv">aesthetician rates 1–10</td><td class="pv">T-boosters ranked F→S</td></tr>
+          <tr><td class="play">Competitor / method teardown</td><td class="kv">vs laser · waxing · dermaplaning</td><td class="pv">vs TRT · beef liver</td></tr>
+          <tr><td class="play">Whistleblower / anti-establishment</td><td class="kv">"boss told me to stop"</td><td class="pv">"Big Pharma hates this"</td></tr>
+          <tr><td class="play">Clinical-stat proof</td><td class="kv">NLM study · 1,400 women · "7× thinner"</td><td class="pv">"sperm ↓50% since 1973" · "38% fewer nutrients"</td></tr>
+          <tr><td class="play">Proxy buyer</td><td class="kv">daughter buys for mom (gift)</td><td class="pv">wife buys for husband</td></tr>
+          <tr><td class="play">"3 mistakes / 3 signs" listicle</td><td class="kv">4 mistakes · 3 fixes</td><td class="pv">3 signs T is crashing · 3 joint signs</td></tr>
+          <tr><td class="play">Mechanism / science explainer</td><td class="kv">DHT · follicle miniaturization</td><td class="pv">HPT axis · aromatase · synovial fluid</td></tr>
+          <tr><td class="play">Fake-scam / sale BOF</td><td class="kv">"IS A SCAM!" → Women's Day sale</td><td class="pv">"weird supplement legit?" → discount</td></tr>
+          <tr><td class="play">Timeline "what happens"</td><td class="kv">week 2 / 4 / 8</td><td class="pv">day 1 / 7 / 14 / 30</td></tr>
+          <tr><td class="play">Skeptic-turned-believer</td><td class="kv">"I thought it was BS"</td><td class="pv">"is this weird Norwegian thing legit?"</td></tr>
+          <tr><td class="play">Guarantee close + scarcity</td><td class="kv">60-day money-back · "sells out"</td><td class="pv">30-day money-back · "sell out fast"</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 2 layer by layer -->
+  <section>
+    <div class="sec-head"><span class="sec-num">02</span><h2>Layer-by-layer, side by side</h2></div>
+    <p class="thesis">The full messaging inventory of each brand, one layer at a time — the raw material behind the comparison.</p>
+
+    <h3 style="font-size:15px;margin:22px 0 10px;color:var(--muted);font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase">Angle archetypes</h3>
+    <div class="cmp">
+      <div class="brand k"><h3>Kelle Skin <span class="meta">121 angles</span></h3><div class="body"><ul class="clean">
+        <li><b>Expert authority</b> — aesthetician (17/23 yr), dermatologist, AI-doctor, MUA</li>
+        <li><b>Founder</b> — Mia &amp; her mum, mum's-perspective, "industry abandoned women"</li>
+        <li><b>Daily-plucker testimonial</b> (the workhorse family, many cuts)</li>
+        <li><b>Sub-avatar cuts</b> — finance exec, sandwiched mom, wellness, generational, Indian-American, Black women, post-divorce</li>
+        <li><b>Objection-handlers</b> — brows/lashes safety, oil-vs-water, dermaplaning, hormone-phobia, price</li>
+        <li><b>Emotional</b> — mother-31-years, "that old woman" fear, relationship cost, Zoom angles</li>
+        <li><b>Mechanism/science</b> — DHT root cause, follicle trauma, "1 enzyme"</li>
+        <li><b>Format plays</b> — claymation, musical, meme, before/after, whistleblower, makeup-barrier</li>
+        <li><b>Product expansion</b> — body-hair (AH) line, dark-spot upsell VSL</li>
+      </ul></div></div>
+      <div class="brand p"><h3>Primal Viking <span class="meta">88 angles · top = highest impressions</span></h3><div class="body"><ul class="clean">
+        <li><b>Celebrity endorsement ★</b> — World's Strongest Man (PV#1,3,4,7 = top deck)</li>
+        <li><b>Before/after transformation</b> — "man boobs / beer belly gone in 9 days"</li>
+        <li><b>Founder + provenance</b> — Norwegian bloodwork, Røros on-location, "reindeer eat mushroom"</li>
+        <li><b>Personified villains</b> — estrogen / cortisol / microplastic animations</li>
+        <li><b>Spouse-POV ★</b> — "new husband," "sex like our 20s," "sperm bank to zero"</li>
+        <li><b>Science/mechanism</b> — TRT-trap, HPT-axis, aromatase myth-buster, tier ranking</li>
+        <li><b>Comparison</b> — beef liver vs reindeer, "expensive urine" multivitamin</li>
+        <li><b>High-drama</b> — infidelity, doctor-off-the-record secret</li>
+        <li><b>Identity/status ★</b> — CEO / "your standards" / G-Wagon</li>
+        <li><b>Problem-aggregation</b> — man boobs · beer belly · joints · ED · fertility · gut</li>
+        <li><b>Quiz funnel ★</b> — "60-second reset"</li>
+      </ul></div></div>
+    </div>
+
+    <h3 style="font-size:15px;margin:26px 0 10px;color:var(--muted);font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase">Unique mechanism — the "why it works"</h3>
+    <div class="cmp">
+      <div class="brand k"><h3>Kelle Skin <span class="meta">58 mechanism blocks</span></h3><div class="body"><ul class="clean">
+        <li><b>Block the DHT signal</b> — <span class="q">"clinically proven to block this DHT signal right at the follicle… it just quiets the signal"</span></li>
+        <li><b>Inhibit the enzyme</b> — <span class="q">"inhibit the 5-alpha reductase enzyme, so less testosterone converts to DHT"</span></li>
+        <li><b>Weaken/shut the follicle</b> — <span class="q">"the follicle undergoes miniaturization, it shrinks… enters dormancy"</span> · "the follicle shuts down"</li>
+        <li><b>All colors (not pigment)</b> — <span class="q">"targets the follicle, not the pigment. Exactly what laser can't do"</span></li>
+        <li><b>Delivery</b> — <span class="q">"water-based, so it actually sinks in and reaches the follicle"</span> (vs Amazon oils)</li>
+        <li><b>Villain setup</b> — "ripping out weeds without touching the root" · plucking = follicle trauma</li>
+        <li><b>Proof</b> — gamma-curcumene · follicle stem cells · NLM "as effective as laser"</li>
+      </ul></div></div>
+      <div class="brand p"><h3>Primal Viking <span class="meta">26 mechanism blocks</span></h3><div class="body"><ul class="clean">
+        <li><b>Crush aromatase</b> — <span class="q">"Crushing the aromatase enzyme that feeds you excess estrogen"</span></li>
+        <li><b>Feed the HPT axis</b> — <span class="q">"the system that controls production, the HPT axis, is starved of the nutrients it runs on"</span></li>
+        <li><b>Man boobs = hormonal</b> — <span class="q">"aromatase converts testosterone into estrogen. Estrogen stores fat in your chest"</span></li>
+        <li><b>Source superiority</b> — <span class="q">"reindeer organs have 10× the testosterone support of beef, 5× the B vitamins, double the zinc"</span></li>
+        <li><b>Bioavailability</b> — "2–3× the bioavailable minerals of beef liver" · multivitamin = "expensive urine"</li>
+        <li><b>Flush toxins</b> — "nettle root lignans flush excess estrogen &amp; microplastic toxins" · rhodiola crushes cortisol</li>
+        <li><b>Joint biochem</b> — "synovial fluid needs omega-3s… cartilage needs CoQ10 &amp; vitamin A"</li>
+      </ul></div></div>
+    </div>
+
+    <h3 style="font-size:15px;margin:26px 0 10px;color:var(--muted);font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase">Offers &amp; CTAs</h3>
+    <div class="cmp">
+      <div class="brand k"><h3>Kelle Skin</h3><div class="body"><ul class="clean">
+        <li><b>60-day money-back</b> — near-universal close (also one 90-day test)</li>
+        <li><b>Risk-reversal framing</b> — <span class="q">"not a buying decision — a trying decision"</span> · "forget your facial hair or get your money back"</li>
+        <li><b>Social proof</b> — "87,000 women" (older) → "16,000+ 5-star reviews" (newer)</li>
+        <li><b>BOF sales</b> — Women's Day (<span class="cnt">WOMAN10</span>), Spring (<span class="cnt">SPRING10</span>), 24-hr flash</li>
+        <li><b>AOV</b> — Buy 2 Get 1 Free · bundles · "start with 2–3 bottles"</li>
+        <li><b>Discount depth</b> — mild (up to 50% off, mostly guarantee-led)</li>
+      </ul></div></div>
+      <div class="brand p"><h3>Primal Viking</h3><div class="body"><ul class="clean">
+        <li><b>30-day money-back</b> — the default close</li>
+        <li><b>Steep discounts ★</b> — <span class="cnt">33 / 50 / 60 / 70 / 80% off</span> (aggressively A/B'd)</li>
+        <li><b>Hard scarcity ★</b> — "first 500 people," "24-hr, tonight only," "limited batches"</li>
+        <li><b>BOGO overstock ★</b> — <span class="q">"we messed up, made way too much… buy one get one free"</span></li>
+        <li><b>Quiz funnel ★</b> — "take our quiz, start your 6-week reset"</li>
+        <li><b>Social proof</b> — "100,000 customers" · "6,000+ 5-star reviews"</li>
+      </ul></div></div>
+    </div>
+
+    <h3 style="font-size:15px;margin:26px 0 10px;color:var(--muted);font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase">Avatars — who they target</h3>
+    <div class="cmp">
+      <div class="brand k"><h3>Kelle Skin <span class="meta">15 sub-avatars ★</span></h3><div class="body"><div class="chips">
+        <span class="chip k">Menopausal women 40s–50s (core)</span><span class="chip k">Women over 40</span><span class="chip k">White/grey-hair (laser can't)</span><span class="chip k">Black women (melanin)</span><span class="chip k">Post-divorce dater (53)</span><span class="chip k">Finance executive</span><span class="chip k">Sandwiched mom (47)</span><span class="chip k">Wellness woman (51)</span><span class="chip k">Generational history</span><span class="chip k">Indian-American (threading)</span><span class="chip k">Skeptic</span><span class="chip k">Gift-buying daughter</span><span class="chip k">Body-hair line (women ~30)</span>
+      </div></div></div>
+      <div class="brand p"><h3>Primal Viking <span class="meta">10 avatars</span></h3><div class="body"><div class="chips">
+        <span class="chip p">Men 35+ (core, declining T)</span><span class="chip p">Dads "not themselves"</span><span class="chip p">Husband via wife-POV ★</span><span class="chip p">Elite/tactical (military, 40+)</span><span class="chip p">Retired pro athlete</span><span class="chip p">Younger optimizer (37)</span><span class="chip p">Status/CEO man</span><span class="chip p">Fertility-worried men</span><span class="chip p">Norwegian/Viking heritage</span>
+      </div><p style="margin:12px 0 0;color:var(--muted);font-size:13px">Fewer, broader personas — but they lean hard on the <b>spouse-proxy</b> and <b>identity</b> avatars Kelle barely tests.</p></div></div>
+    </div>
+
+    <h3 style="font-size:15px;margin:26px 0 10px;color:var(--muted);font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase">Problems called out &amp; dream states</h3>
+    <div class="cmp">
+      <div class="brand k"><h3>Kelle — problems / desires</h3><div class="body">
+        <ul class="clean" style="margin-bottom:12px">
+          <li><b>Problems:</b> 20-min mirror ritual · "avoid certain lighting" · waxing wrecks mature skin · "laser won't touch grey" · makeup won't sit · ingrowns/dark spots</li>
+          <li><b>Desires:</b> <span class="q">"completely smooth chin… peach fuzz gone"</span> · "feel like myself again" · "got their confidence back" · "leave the house without thinking about it" · relationship intimacy</li>
+        </ul>
+      </div></div>
+      <div class="brand p"><h3>Primal Viking — problems / desires</h3><div class="body">
+        <ul class="clean">
+          <li><b>Problems:</b> man boobs · beer belly · low drive/ED · fertility/sperm · joint pain · "doing everything right, nothing moved" · mood/energy</li>
+          <li><b>Desires:</b> <span class="q">"sex like we did in our 20s"</span> · "energy back… wife noticed" · "soft to solid" · "feel like the man he wanted to be" · morning wood · take my shirt off</li>
+        </ul>
+      </div></div>
+    </div>
+
+    <h3 style="font-size:15px;margin:26px 0 10px;color:var(--muted);font-family:var(--mono);letter-spacing:.04em;text-transform:uppercase">The reusable "spine" — most-repeated blocks</h3>
+    <div class="cmp">
+      <div class="brand k"><h3>Kelle — repeated messaging</h3><div class="body"><div class="bars">
+        <div class="bar"><div class="lab">"targets the follicle &amp; weakens it progressively" <span class="k">core mechanism</span></div><div class="track"><div class="fill" style="width:100%;background:var(--kelle)"></div></div></div>
+        <div class="bar"><div class="lab">"Over 87,000 women have used this" <span class="k">×18</span></div><div class="track"><div class="fill" style="width:72%;background:var(--kelle)"></div></div></div>
+        <div class="bar"><div class="lab">week-by-week future pacing <span class="k">×12</span></div><div class="track"><div class="fill" style="width:48%;background:var(--kelle)"></div></div></div>
+        <div class="bar"><div class="lab">"friend showed up… WHAT DID YOU DO" reveal <span class="k">×11</span></div><div class="track"><div class="fill" style="width:44%;background:var(--kelle)"></div></div></div>
+      </div></div></div>
+      <div class="brand p"><h3>Primal Viking — repeated messaging</h3><div class="body"><div class="bars">
+        <div class="bar"><div class="lab">"gone in 9 days / hormones not food / reset balance" <span class="k">transformation block ×5</span></div><div class="track"><div class="fill" style="width:100%;background:var(--pv)"></div></div></div>
+        <div class="bar"><div class="lab">"100,000 customers" social proof <span class="k">×4</span></div><div class="track"><div class="fill" style="width:80%;background:var(--pv)"></div></div></div>
+        <div class="bar"><div class="lab">"not your fault — modern food stripped the nutrients" <span class="k">×5</span></div><div class="track"><div class="fill" style="width:100%;background:var(--pv)"></div></div></div>
+        <div class="bar"><div class="lab">joint ritual (cod liver oil + plant balm) <span class="k">×4</span></div><div class="track"><div class="fill" style="width:80%;background:var(--pv)"></div></div></div>
+      </div></div></div>
+    </div>
+  </section>
+
+  <!-- 3 they do better -->
+  <section>
+    <div class="sec-head"><span class="sec-num">03</span><h2>What they run BETTER than us — ranked by their impression weight</h2></div>
+    <p class="thesis">These are the plays Primal Viking leans on — several sit in their <b>highest-impression ads</b> — that Kelle either doesn't run or barely touches. This is the steal-list.</p>
+    <div class="gaps">
+      <div class="gap"><div class="rank">1</div><div><h4>A famous / named authority face — at the very top</h4><p>Their #1-impression ads (PV#1,3,4,7) are the <b>World's Strongest Man</b>, plus whitelisted athletes (Rampage Jackson, Dustin Poirier, Showtime Pettis). Kelle's authority is <i>anonymous</i> aestheticians/dermatologists. A named expert, celebrity esthetician, or influencer face is total whitespace — and it's their single biggest edge.<span class="tag">PV#1 · top of deck</span></p></div></div>
+      <div class="gap"><div class="rank">2</div><div><h4>Ingredient provenance, filmed on-location</h4><p>They <i>show</i> the reindeer roaming Røros, Norway — "coldest city in Europe, −56°F," "reindeer eat mushroom." Kelle <i>claims</i> "ancient Egyptian botanical" but never shows it. A sourcing/origin film is untested and highly credible.<span class="tag">PV#21 · 55 · 95 · 96</span></p></div></div>
+      <div class="gap"><div class="rank">3</div><div><h4>Spouse-relationship outcomes as a core, recurring angle</h4><p>Wife-POV "new husband / sex like our 20s / saved the relationship" runs all through their deck (PV#16,23,28,30,66,102). Kelle touches it once (post-divorce dating). Systematized partner-outcome testimonials are a proven Primal Viking staple we underuse.<span class="tag">recurring high in deck</span></p></div></div>
+      <div class="gap"><div class="rank">4</div><div><h4>A quiz / diagnostic funnel</h4><p>"Almost half a million men over 35 took this quiz… 60 seconds… personal 6-week reset." Kelle has no interactive lead-gen or diagnostic entry point.<span class="tag">PV#93</span></p></div></div>
+      <div class="gap"><div class="rank">5</div><div><h4>High-drama narrative storytelling</h4><p>Infidelity ("she was with another man"), the "doctor off-the-record secret." Kelle's emotional ads (mother-31-years, "that old woman") are softer — Primal Viking pushes higher-stakes drama.<span class="tag">PV#98 · 100</span></p></div></div>
+      <div class="gap"><div class="rank">6</div><div><h4>Aggressive offer &amp; urgency testing</h4><p>60–80% off, "first 500 people," 24-hr flash, and the <b>BOGO overstock</b> excuse ("we made too much"). Kelle's offers are milder and guarantee-led.<span class="tag">PV#1 · 13 · 58</span></p></div></div>
+      <div class="gap"><div class="rank">7</div><div><h4>Identity / status angle</h4><p>"The most expensive thing should be your standards" — CEO, G-Wagon, first-class. Kelle is 100% problem-relief with no aspirational-identity play.<span class="tag">PV#119</span></p></div></div>
+      <div class="gap"><div class="rank">8</div><div><h4>Problem-aggregation (many doors, one room)</h4><p>They open with man boobs, beer belly, joints, ED, fertility, gut — each a separate hook routing to one root cause &amp; product. Kelle runs mostly one problem (facial hair) × many avatars.<span class="tag">portfolio strategy</span></p></div></div>
+    </div>
+  </section>
+
+  <!-- 4 we do better -->
+  <section>
+    <div class="sec-head"><span class="sec-num">04</span><h2>What WE run better than them</h2></div>
+    <p class="thesis">Kelle isn't behind everywhere — these are our structural edges, worth protecting and pushing.</p>
+    <div class="gaps">
+      <div class="gap mine"><div class="rank">1</div><div><h4>Sub-avatar segmentation</h4><p>15 narrow personas (finance exec, sandwiched mom, wellness woman, generational, Indian-American, Black women, post-divorce) vs their ~10 broader ones. We test who-it's-for far more granularly.<span class="tag">15 vs 10 avatars</span></p></div></div>
+      <div class="gap mine"><div class="rank">2</div><div><h4>Dedicated objection-handler ads</h4><p>Whole ads that dismantle one buying objection — "will it thin my brows?", oil-vs-water, price math, dermaplaning, hormone-phobia. Primal Viking has far fewer explicit rebuttal ads.<span class="tag">funnel maturity</span></p></div></div>
+      <div class="gap mine"><div class="rank">3</div><div><h4>Format breadth</h4><p>Claymation, Pixar-style musical, "Directed by" memes, before/after, static text-overlay, long VSL, whistleblower, makeup-barrier. A wider creative-format test surface.<span class="tag">254 distinct hooks</span></p></div></div>
+      <div class="gap mine"><div class="rank">4</div><div><h4>Emotional depth ladder</h4><p>A deliberate escalation from practical (20-min ritual) → social (Zoom angles) → relational (flinching from a partner) → existential ("that old woman," generational, mortality). A richer emotional map.<span class="tag">problem framing</span></p></div></div>
+    </div>
+  </section>
+
+  <!-- 5 trends -->
+  <section>
+    <div class="sec-head"><span class="sec-num">05</span><h2>Trends — what Primal Viking is testing right now</h2></div>
+    <p class="thesis">Reading their deck by impression priority + creation order reveals the direction of their testing.</p>
+    <div class="cmp">
+      <div class="card"><h3 style="margin:0 0 8px;font-size:15px">Proven core (top of deck)</h3><p style="margin:0;color:var(--muted);font-size:13.5px">Celebrity endorsement + before/after transformation + founder story. Their highest-impression ads are the safest, most-scaled plays.</p></div>
+      <div class="card"><h3 style="margin:0 0 8px;font-size:15px">Sophistication ladder (newer ads)</h3><p style="margin:0;color:var(--muted);font-size:13.5px">Moving from simple transformations → quiz funnels, doctor-secret, infidelity drama, "not your fault" reframe, interview format. The same mechanism-depth climb Kelle went through.</p></div>
+      <div class="card"><h3 style="margin:0 0 8px;font-size:15px">Problem diversification</h3><p style="margin:0;color:var(--muted);font-size:13.5px">Newest tests expand beyond core testosterone into <b>joints, fertility/sperm, gut health</b> — widening the top-of-funnel net across concerns.</p></div>
+      <div class="card"><h3 style="margin:0 0 8px;font-size:15px">Volume &amp; offer play</h3><p style="margin:0;color:var(--muted);font-size:13.5px">~40% of their library is <b>cheap static / hook-only</b> variants running alongside the VSLs, plus many discount tiers + BOGO + quiz A/B'd at once. High-volume, high-offer-variance testing.</p></div>
+    </div>
+  </section>
+
+  <!-- 6 recommendations -->
+  <section>
+    <div class="sec-head"><span class="sec-num">06</span><h2>The whitespace — what Kelle should test next</h2></div>
+    <div class="callout gap">
+      <h3>Four highest-leverage tests, straight from their winners</h3>
+      <p style="margin-bottom:10px">Each is proven for Primal Viking, present in their high-impression ads, and absent (or barely touched) in Kelle's 121-ad library:</p>
+      <ul class="clean">
+        <li><b>1 · A named authority / celebrity face</b> — a real named dermatologist, a recognizable esthetician, or a menopause-space influencer, fronting the mechanism (their #1 lever).</li>
+        <li><b>2 · On-location ingredient-provenance film</b> — show the Cyperus Rotundus / Egyptian sourcing story visually, the way they film Røros.</li>
+        <li><b>3 · A quiz funnel</b> — "60-second facial-hair / hormone quiz → your personal plan," as an interactive top-of-funnel entry.</li>
+        <li><b>4 · Systematized partner-outcome testimonials</b> — the relationship/intimacy payoff (turning the cheek, being seen) as a recurring format, not a one-off.</li>
+      </ul>
+    </div>
+    <p style="margin-top:16px;color:var(--faint);font-size:13px">Data note: this compares <i>what</i> each brand tests. To rank <i>what's actually winning</i> for Primal Viking, add their Meta performance export (spend / ROAS / hook-rate), same as we did for Kelle — then the impression-priority weighting becomes true spend-priority.</p>
+  </section>
+
+  <footer>
+    <span>Kelle Skin × Primal Viking · Competitive Messaging Teardown</span>
+    <span>602 + 232 verified elements · builder-sourced · brand_id 23 / 49</span>
+  </footer>
+</div>

@@ -1,0 +1,586 @@
+<title>Smooche Consumer Research Dossier</title>
+<style>
+  :root{
+    --ground:#F6F3F4; --surface:#FFFFFF; --surface-2:#FBF9FA;
+    --ink:#241E26; --muted:#6E6473; --faint:#9A8FA0;
+    --accent:#7C3A68; --accent-soft:#F0E3EC;
+    --hairline:#E4DDE2; --hairline-strong:#D6CCD4;
+    --good:#2E7D5B; --good-bg:#E6F1EB;
+    --warn:#9A6A12; --warn-bg:#F6EEDC;
+    --bad:#B23A48; --bad-bg:#F7E4E6;
+    --skin:#E8C7A8; --oxid:#D98C4A;
+    --maxw:760px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ground:#19141B; --surface:#221C25; --surface-2:#1E1821;
+      --ink:#F2ECEF; --muted:#A99FAF; --faint:#7C7183;
+      --accent:#D98CC4; --accent-soft:#2E2230;
+      --hairline:#352D38; --hairline-strong:#473C4A;
+      --good:#6FC79A; --good-bg:#17291F;
+      --warn:#E0B155; --warn-bg:#2B2413;
+      --bad:#E78B9A; --bad-bg:#2E171B;
+      --skin:#B78E6A; --oxid:#E0975A;
+    }
+  }
+  :root[data-theme="light"]{
+    --ground:#F6F3F4; --surface:#FFFFFF; --surface-2:#FBF9FA;
+    --ink:#241E26; --muted:#6E6473; --faint:#9A8FA0;
+    --accent:#7C3A68; --accent-soft:#F0E3EC;
+    --hairline:#E4DDE2; --hairline-strong:#D6CCD4;
+    --good:#2E7D5B; --good-bg:#E6F1EB; --warn:#9A6A12; --warn-bg:#F6EEDC;
+    --bad:#B23A48; --bad-bg:#F7E4E6; --skin:#E8C7A8; --oxid:#D98C4A;
+  }
+  :root[data-theme="dark"]{
+    --ground:#19141B; --surface:#221C25; --surface-2:#1E1821;
+    --ink:#F2ECEF; --muted:#A99FAF; --faint:#7C7183;
+    --accent:#D98CC4; --accent-soft:#2E2230;
+    --hairline:#352D38; --hairline-strong:#473C4A;
+    --good:#6FC79A; --good-bg:#17291F; --warn:#E0B155; --warn-bg:#2B2413;
+    --bad:#E78B9A; --bad-bg:#2E171B; --skin:#B78E6A; --oxid:#E0975A;
+  }
+
+  *{box-sizing:border-box;}
+  body{
+    margin:0; background:var(--ground); color:var(--ink);
+    font-family:'Helvetica Neue',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+    font-size:17px; line-height:1.62; -webkit-font-smoothing:antialiased;
+    text-rendering:optimizeLegibility;
+  }
+  .wrap{max-width:var(--maxw); margin:0 auto; padding:0 24px 120px;}
+
+  /* ---- display / type ---- */
+  .display{font-family:'Didot','Bodoni 72','Hoefler Text',Garamond,'Times New Roman',serif;}
+  h1,h2,h3{text-wrap:balance;}
+  a{color:var(--accent); text-decoration:none; border-bottom:1px solid var(--hairline-strong);}
+  a:hover{border-bottom-color:var(--accent);}
+  a:focus-visible{outline:2px solid var(--accent); outline-offset:2px; border-radius:2px;}
+  .kicker{font-size:12px; letter-spacing:.26em; text-transform:uppercase; color:var(--accent); font-weight:600;}
+  .mono{font-family:ui-monospace,'SF Mono',Menlo,Consolas,monospace; font-variant-numeric:tabular-nums;}
+
+  /* ---- hero ---- */
+  header.hero{padding:76px 0 30px; animation:rise .7s cubic-bezier(.2,.7,.2,1) both;}
+  @media (prefers-reduced-motion:reduce){header.hero{animation:none;}}
+  @keyframes rise{from{opacity:0; transform:translateY(14px);} to{opacity:1; transform:none;}}
+  header.hero h1{
+    font-size:clamp(40px,8.5vw,74px); line-height:.98; font-weight:400;
+    margin:.28em 0 .32em; letter-spacing:-.01em;
+  }
+  header.hero h1 em{font-style:italic;}
+  .dek{font-size:20px; line-height:1.5; color:var(--muted); max-width:34em;}
+  .oxrule{height:3px; border:0; margin:30px 0 22px;
+    background:linear-gradient(90deg,var(--skin),var(--oxid) 48%,var(--accent)); border-radius:3px;}
+  .byline{display:flex; flex-wrap:wrap; gap:8px 26px; font-size:13px; color:var(--faint);
+    padding-top:4px;}
+  .byline b{color:var(--muted); font-weight:600;}
+
+  /* ---- section scaffolding ---- */
+  section{padding-top:58px;}
+  .sec-head{display:flex; align-items:baseline; gap:14px; margin-bottom:6px;}
+  .sec-num{font-family:ui-monospace,'SF Mono',Menlo,monospace; font-size:13px; color:var(--accent);
+    font-weight:600; padding-top:7px;}
+  section h2{font-size:clamp(25px,4.6vw,33px); font-weight:400; line-height:1.08; margin:0; letter-spacing:-.01em;}
+  .lede{color:var(--muted); font-size:17px; margin:.5em 0 1.1em;}
+  h3{font-size:19px; font-weight:600; margin:1.7em 0 .5em; letter-spacing:-.005em;}
+  p{margin:.75em 0;}
+  ul,ol{margin:.6em 0; padding-left:1.25em;}
+  li{margin:.42em 0;}
+  strong{font-weight:600;}
+  hr.soft{border:0; border-top:1px solid var(--hairline); margin:0;}
+
+  /* ---- callouts ---- */
+  .note{background:var(--surface); border:1px solid var(--hairline); border-left:3px solid var(--accent);
+    border-radius:4px; padding:16px 20px; margin:20px 0; font-size:15.5px;}
+  .note .lab{font-size:11px; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:700; display:block; margin-bottom:6px;}
+  .brand-signal{border-left-color:var(--oxid);}
+  .brand-signal .lab{color:var(--oxid);}
+
+  /* ---- exec summary tiles ---- */
+  .tiles{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--hairline);
+    border:1px solid var(--hairline); border-radius:6px; overflow:hidden; margin:22px 0;}
+  .tile{background:var(--surface); padding:18px 16px;}
+  .tile .n{font-family:'Didot','Hoefler Text',serif; font-size:34px; line-height:1; color:var(--accent);}
+  .tile .l{font-size:12.5px; color:var(--muted); margin-top:7px; line-height:1.35;}
+  @media(max-width:560px){.tiles{grid-template-columns:1fr 1fr;}}
+
+  /* ---- ranked problems ---- */
+  .rank{border-top:1px solid var(--hairline); padding:20px 0;}
+  .rank-top{display:flex; gap:16px; align-items:baseline;}
+  .rank-no{font-family:'Didot','Hoefler Text',serif; font-size:30px; color:var(--accent); line-height:1; min-width:1.3em;}
+  .rank h3{margin:0; font-size:19.5px;}
+  .rank p{font-size:15.5px; color:var(--ink); margin:.5em 0 .5em 0;}
+  .quote{font-family:'Didot','Hoefler Text',serif; font-style:italic; font-size:18px; line-height:1.45;
+    color:var(--ink); border-left:2px solid var(--accent-soft); padding:2px 0 2px 16px; margin:.7em 0;}
+  .quote cite{display:block; font-family:'Helvetica Neue',sans-serif; font-style:normal; font-size:12.5px;
+    color:var(--faint); margin-top:6px;}
+  .chips{display:flex; flex-wrap:wrap; gap:7px; margin-top:10px;}
+  .chip{font-size:11.5px; line-height:1; padding:6px 10px; border-radius:100px; border:1px solid var(--hairline-strong);
+    color:var(--muted); background:var(--surface-2);}
+  .chip b{color:var(--ink); font-weight:600;}
+  .chip.hi{border-color:color-mix(in srgb,var(--good) 45%,transparent); color:var(--good); background:var(--good-bg);}
+  .chip.med{border-color:color-mix(in srgb,var(--warn) 45%,transparent); color:var(--warn); background:var(--warn-bg);}
+
+  /* ---- tables ---- */
+  .scroll{overflow-x:auto; border:1px solid var(--hairline); border-radius:6px; margin:20px 0;}
+  table{border-collapse:collapse; width:100%; font-size:13.5px;}
+  th,td{text-align:left; padding:11px 13px; border-bottom:1px solid var(--hairline); vertical-align:top;}
+  th{background:var(--surface-2); font-size:11px; letter-spacing:.09em; text-transform:uppercase;
+    color:var(--muted); font-weight:700; white-space:nowrap; position:sticky; top:0;}
+  tr:last-child td{border-bottom:0;}
+  td.q{font-style:italic; color:var(--muted); min-width:240px;}
+  .cmp td:first-child,.cmp th:first-child{position:sticky; left:0; background:var(--surface); font-weight:600;}
+  .cmp th:first-child{background:var(--surface-2);}
+
+  /* ---- claims audit ---- */
+  .claim{display:grid; grid-template-columns:auto 1fr; gap:14px; padding:15px 0; border-top:1px solid var(--hairline);}
+  .verdict{font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; font-weight:700; padding:5px 9px;
+    border-radius:4px; height:fit-content; white-space:nowrap; margin-top:2px;}
+  .v-good{color:var(--good); background:var(--good-bg);}
+  .v-warn{color:var(--warn); background:var(--warn-bg);}
+  .v-bad{color:var(--bad); background:var(--bad-bg);}
+  .claim .c-claim{font-weight:600; margin:0 0 3px;}
+  .claim .c-body{font-size:14.5px; color:var(--muted); margin:0;}
+
+  /* ---- angles / hooks ---- */
+  .angle{border-top:1px solid var(--hairline); padding:15px 0;}
+  .angle .a-name{font-weight:600; font-size:16.5px;}
+  .angle .a-name span{font-family:ui-monospace,monospace; color:var(--accent); font-size:13px; margin-right:9px;}
+  .angle p{font-size:14.5px; color:var(--muted); margin:.3em 0 0;}
+  ol.hooks{list-style:none; padding:0; counter-reset:h; margin:18px 0;}
+  ol.hooks li{counter-increment:h; padding:13px 0 13px 46px; border-top:1px solid var(--hairline); position:relative;
+    font-family:'Didot','Hoefler Text',serif; font-size:19px; line-height:1.4; font-style:italic;}
+  ol.hooks li::before{content:"H"counter(h); position:absolute; left:0; top:15px;
+    font-family:ui-monospace,monospace; font-style:normal; font-size:12px; color:var(--accent); font-weight:600;}
+  ol.hooks li em{font-style:normal; color:var(--muted); font-family:'Helvetica Neue',sans-serif; font-size:12.5px; display:block; margin-top:5px;}
+
+  .avoid{background:var(--bad-bg); border:1px solid color-mix(in srgb,var(--bad) 30%,transparent);
+    border-radius:6px; padding:6px 20px 14px; margin:18px 0;}
+  .avoid li{color:var(--ink);}
+
+  /* ---- bibliography ---- */
+  .bib{font-size:14px; color:var(--muted);}
+  .bib li{margin:.55em 0;}
+  footer{margin-top:70px; padding-top:22px; border-top:1px solid var(--hairline); font-size:12.5px; color:var(--faint);}
+</style>
+
+<div class="wrap">
+
+<header class="hero">
+  <div class="kicker">Consumer Research Dossier · Direct-Response Intelligence</div>
+  <h1 class="display">The Foundation Problem for <em>Women Over&nbsp;50</em></h1>
+  <p class="dek">What American women 45–70 actually say about complexion makeup — their frustrations, failed fixes, and buying triggers — and an evidence-graded read on where Smooche Color-Changing Foundation can honestly compete.</p>
+  <hr class="oxrule">
+  <div class="byline">
+    <span><b>Prepared for</b> Smooche creative team</span>
+    <span><b>Primary source</b> Reddit (US 45+ communities)</span>
+    <span><b>Supplementary</b> dermatology literature · independent reviews · Smooche ad corpus</span>
+    <span><b>Date</b> 10 Oct 2026</span>
+  </div>
+</header>
+
+<!-- 1 -->
+<section id="summary">
+  <div class="sec-head"><span class="sec-num">01</span><h2 class="display">Executive summary</h2></div>
+  <p>Among US women 45+, complexion makeup is dominated by a single, emotionally loaded problem: <strong>traditional foundation stops working once skin changes</strong>. It settles into lines, clings to dry patches, oxidizes orange, and — the phrase that recurs most — <strong>“makes me look older.”</strong> A large share of this audience has already <em>left</em> foundation for tinted sunscreens, skin tints, BB/CC creams, or concealer-only routines, and a second share keeps re-buying foundations hoping the next one is different.</p>
+  <div class="tiles">
+    <div class="tile"><div class="n">~60+</div><div class="l">distinct discussion threads reviewed across 7 communities</div></div>
+    <div class="tile"><div class="n">1&nbsp;of&nbsp;2</div><div class="l">dominant emotional driver is “looking older,” not coverage itself</div></div>
+    <div class="tile"><div class="n">2</div><div class="l">first-person Smooche reviews found — both negative, one from the 45+ segment</div></div>
+  </div>
+  <p>The honest competitive read: Smooche’s <strong>strongest, most credible openings are the pains it already shares with every foundation</strong> — settling into lines, oxidation, “cakey,” the aging effect of heavy/matte formulas, and shade-matching fatigue. Its <strong>weakest and riskiest territory is its central mechanism claim</strong> — that the product “adapts to <em>your</em> skin tone.” The makeup-literate corners of this audience treat color-changing foundation as a decades-old recycled gimmick, and independent reviews describe Smooche as a limited single-shade, light-to-medium product with real shipping/refund complaints (BBB rating: F). Lead with the <em>feeling</em> and the <em>failure of alternatives</em>; be extremely careful with the <em>science</em>.</p>
+</section>
+
+<!-- 2 -->
+<section id="method">
+  <div class="sec-head"><span class="sec-num">02</span><h2 class="display">Methodology &amp; limitations</h2></div>
+  <p class="lede">Read these caveats before quoting any number in this dossier to a stakeholder.</p>
+  <ul>
+    <li><strong>Primary method:</strong> structured Reddit search + full-thread reading (posts and replies) across r/45PlusSkincare, r/MatureBeauty, r/over60, r/Makeup, r/MakeupAddiction, r/OliveMUA, r/Melasmaskincare. Themes were counted by <em>distinct threads</em> and <em>distinct first-person accounts</em>, not upvotes.</li>
+    <li><strong>Supplementary:</strong> the live Smooche product page; independent review write-ups and aggregators; peer-reviewed dermatology / cosmetic-science literature; and — kept strictly separate — Smooche’s own video-ad corpus (440 ads) as a <em>brand-positioning</em> signal, never as consumer evidence.</li>
+    <li><strong>Reddit is a self-selected sample.</strong> Recurring qualitative themes are reported as themes — not population prevalence. Nothing here supports “most women over 50 experience X.” Upvotes are not treated as agreement.</li>
+    <li><strong>ICP discipline:</strong> focus is US women 45+. The dedicated subs skew to that age, but Reddit is US-majority, not US-only; the handful of younger (30s) or non-US (e.g. one UK 46F) posters are labelled as such and never counted as core-ICP evidence.</li>
+    <li><strong>What this is not:</strong> product lab testing. Any claim marked “requires testing” below cannot be resolved from desk research and must be verified on the actual formula before it enters an ad.</li>
+  </ul>
+</section>
+
+<!-- 3 -->
+<section id="profile">
+  <div class="sec-head"><span class="sec-num">03</span><h2 class="display">Target customer &amp; desired outcome</h2></div>
+  <p>She is 48–68, American, has worn makeup her whole life, and feels betrayed by it. Her skin has changed — drier, more texture, fine lines, some pigmentation or redness, thinner/crepey areas — and the foundation that worked for twenty years now “sits in the cracks.” She is not chasing a full glam beat. She wants to look like <strong>herself, on a good day, ten years ago</strong>: even-toned, rested, “not tired,” without looking like she’s <em>wearing</em> anything.</p>
+  <h3>What she is actually trying to achieve</h3>
+  <ul>
+    <li><strong>Even tone without the mask.</strong> Cover redness, spots, and sallowness — but “look like skin.” The dreaded outcome is <em>obvious</em> makeup.</li>
+    <li><strong>To not look older than she feels.</strong> The repeated fear: a product that “ages me,” “looks masklike,” or emphasizes every line.</li>
+    <li><strong>Simplicity.</strong> A “5-minute face.” Many explicitly want to collapse the primer→corrector→foundation→concealer→powder→spray routine, not add to it.</li>
+    <li><strong>To stop wasting money.</strong> She has a drawer of $40–$60 failures and is suspicious of paid reviews and AI-filled ads.</li>
+    <li><strong>To feel like herself in front of people</strong> — at a wedding, a new job, after a divorce, at daycare drop-off. The emotional stakes are social and specific.</li>
+  </ul>
+</section>
+
+<!-- 4 -->
+<section id="problems">
+  <div class="sec-head"><span class="sec-num">04</span><h2 class="display">The ranked customer problems</h2></div>
+  <p class="lede">Ranked by recurrence across threads × emotional intensity × purchase relevance. Each carries the methods it affects, the evidence reviewed, a representative verbatim, and confidence. “Mature-specific” flags whether the pain is distinctive to 45+ or also common in younger users.</p>
+
+  <div class="rank">
+    <div class="rank-top"><div class="rank-no display">1</div><h3>Foundation settles into fine lines, wrinkles &amp; creases</h3></div>
+    <p>The single most recurring complaint. Pigment pools in expression lines around eyes and mouth; the face looks <em>more</em> lined with makeup than without. The emotional kicker is that the product does the opposite of its job.</p>
+    <blockquote class="quote">“Every foundation that I try looks awful with my wrinkles.”<cite>52F · r/45PlusSkincare</cite></blockquote>
+    <div class="chips">
+      <span class="chip">Affects: <b>full routine, full-coverage, powder</b></span>
+      <span class="chip">Threads: <b>25+</b></span>
+      <span class="chip hi">Confidence: High</span>
+      <span class="chip">Mature-specific: <b>amplified</b> (also hits younger)</span>
+    </div>
+  </div>
+
+  <div class="rank">
+    <div class="rank-top"><div class="rank-no display">2</div><h3>Makeup “ages me” / looks masklike → women abandon foundation</h3></div>
+    <p>Distinct from settling: even when it technically wears fine, foundation reads as <em>heavy, flat, masklike, aging</em>. This drives a large migration away from foundation entirely toward tinted sunscreen, skin tint, or concealer-only.</p>
+    <blockquote class="quote">“I can no longer use foundation. It makes me look older, emphasizes lines. Even BB creams look bad.”<cite>60F · r/45PlusSkincare</cite></blockquote>
+    <div class="chips">
+      <span class="chip">Affects: <b>full-coverage, full routine</b></span>
+      <span class="chip">Threads: <b>15+</b> (one ~30-account thread)</span>
+      <span class="chip hi">Confidence: High</span>
+      <span class="chip">Mature-specific: <b>yes</b></span>
+    </div>
+  </div>
+
+  <div class="rank">
+    <div class="rank-top"><div class="rank-no display">3</div><h3>Oxidation — turning orange / darker through the day</h3></div>
+    <p>A foundation that matched at 8am reads orange or muddy by midday. Named repeatedly and emotionally (“Donald Trump orange,” “oompa loompa,” “traffic cone”). It’s a trust-breaker: you can’t see it happening until it’s too late.</p>
+    <blockquote class="quote">“I love the easy application… However, lately I’ve been noticing I’m looking orange by midday.”<cite>52F · r/MatureBeauty</cite></blockquote>
+    <div class="chips">
+      <span class="chip">Affects: <b>liquid foundation, BB/CC, tinted SPF</b></span>
+      <span class="chip">Threads: <b>12+</b></span>
+      <span class="chip hi">Confidence: High</span>
+      <span class="chip">Mature-specific: <b>no</b> (all ages)</span>
+    </div>
+  </div>
+
+  <div class="rank">
+    <div class="rank-top"><div class="rank-no display">4</div><h3>Clinging to dry patches &amp; flaking; looks “dry/cakey” fast</h3></div>
+    <p>Mature skin is often drier; foundation goes patchy or flaky “within 5 minutes,” especially powders. Hydration under makeup helps but doesn’t fully solve it.</p>
+    <blockquote class="quote">“Everything looks dry and patchy within 5 minutes. I am so frustrated.”<cite>46F returning to makeup · r/45PlusSkincare</cite></blockquote>
+    <div class="chips">
+      <span class="chip">Affects: <b>powder, full-coverage, full routine</b></span>
+      <span class="chip">Threads: <b>15+</b></span>
+      <span class="chip hi">Confidence: High</span>
+      <span class="chip">Mature-specific: <b>amplified</b></span>
+    </div>
+  </div>
+
+  <div class="rank">
+    <div class="rank-top"><div class="rank-no display">5</div><h3>Emphasizing pores &amp; texture instead of blurring them</h3></div>
+    <p>Glowy formulas sink into pores; matte formulas flatten and highlight texture. Women describe an impossible middle ground between “greasy” and “flat.”</p>
+    <blockquote class="quote">“Color’s off, finish is too dewy or too matte, and worst of all they just settled into my pores after a few hours.”<cite>45+ · r/45PlusSkincare</cite></blockquote>
+    <div class="chips">
+      <span class="chip">Affects: <b>all complexion products</b></span>
+      <span class="chip">Threads: <b>12+</b></span>
+      <span class="chip hi">Confidence: High</span>
+      <span class="chip">Mature-specific: <b>amplified</b></span>
+    </div>
+  </div>
+
+  <div class="rank">
+    <div class="rank-top"><div class="rank-no display">6</div><h3>Shade &amp; undertone never right (and shade ranges too narrow)</h3></div>
+    <p>“Light skin isn’t all pink.” Olive, neutral, and deep tones get mismatched; discontinued shades force a restart. Color-adapting products are specifically distrusted here.</p>
+    <blockquote class="quote">“[I] need something that… knows light skin girls aren’t all pink.”<cite>49F · r/45PlusSkincare</cite></blockquote>
+    <div class="chips">
+      <span class="chip">Affects: <b>foundation, skin tint, color-adapting</b></span>
+      <span class="chip">Threads: <b>10+</b></span>
+      <span class="chip hi">Confidence: High</span>
+      <span class="chip">Mature-specific: <b>no</b></span>
+    </div>
+  </div>
+
+  <div class="rank">
+    <div class="rank-top"><div class="rank-no display">7</div><h3>Lighter products (tinted moisturizer / skin tint) don’t cover enough</h3></div>
+    <p>The flip side of #2: when she switches to something lighter to avoid the mask, it won’t hide redness, melasma, or spots — or it’s “too dewy.” This is the exact gap a medium-coverage, natural-finish product targets.</p>
+    <blockquote class="quote">“I have a full coverage foundation that I like, but… I want a ‘quick’ coverage option… enough coverage to not feel totally self-conscious.”<cite>r/Melasmaskincare</cite></blockquote>
+    <div class="chips">
+      <span class="chip">Affects: <b>tinted moisturizer, skin tint, BB/CC</b></span>
+      <span class="chip">Threads: <b>12+</b></span>
+      <span class="chip hi">Confidence: High</span>
+      <span class="chip">Mature-specific: <b>no</b></span>
+    </div>
+  </div>
+
+  <div class="rank">
+    <div class="rank-top"><div class="rank-no display">8</div><h3>Expensive products that don’t perform → repeat-buy fatigue &amp; distrust</h3></div>
+    <p>A drawer of $40–$60 misses. Deep suspicion of “best for mature skin” listicles (“just foundations with skincare in them”) and paid reviews. This is why they come to Reddit — and why a money-back guarantee matters.</p>
+    <blockquote class="quote">“I really don’t want to spend $50 ten times trying to find it.”<cite>r/MatureBeauty</cite></blockquote>
+    <div class="chips">
+      <span class="chip">Affects: <b>all</b></span>
+      <span class="chip">Threads: <b>10+</b></span>
+      <span class="chip hi">Confidence: High</span>
+      <span class="chip">Mature-specific: <b>amplified</b></span>
+    </div>
+  </div>
+
+  <div class="rank">
+    <div class="rank-top"><div class="rank-no display">9</div><h3>Routine is too complicated / wants fewer steps</h3></div>
+    <p>“5-minute face.” Many want to collapse primer→corrector→foundation→concealer→powder→spray into one or two steps — the opposite of the full multi-step routine.</p>
+    <blockquote class="quote">“I have a 5 minute neutral face… overwhelmed at all the possibilities.”<cite>46F · r/45PlusSkincare</cite></blockquote>
+    <div class="chips">
+      <span class="chip">Affects: <b>full multi-step routine</b></span>
+      <span class="chip">Threads: <b>8+</b></span>
+      <span class="chip med">Confidence: Medium</span>
+      <span class="chip">Mature-specific: <b>leans yes</b></span>
+    </div>
+  </div>
+
+  <div class="rank">
+    <div class="rank-top"><div class="rank-no display">10</div><h3>Concealer, powder &amp; setting-spray failures</h3></div>
+    <p>Under-eye concealer creases and dries into lines; powder settles and “highlights wrinkles”; setting sprays don’t stop breakup. Several report powder as the <em>cause</em> of an aged look — though a minority swear powder foundation is their fix.</p>
+    <blockquote class="quote">“Any concealer… in my under-eye area settl[es] into and exaggerat[es] fine lines and almost always dr[ies] in a very unflattering way.”<cite>r/MatureBeauty</cite></blockquote>
+    <div class="chips">
+      <span class="chip">Affects: <b>concealer, powder, setting spray</b></span>
+      <span class="chip">Threads: <b>10+</b></span>
+      <span class="chip hi">Confidence: High</span>
+      <span class="chip">Mature-specific: <b>amplified</b></span>
+    </div>
+  </div>
+
+  <div class="rank">
+    <div class="rank-top"><div class="rank-no display">11</div><h3>Redness / rosacea coverage vs. a natural look</h3></div>
+    <p>Rosacea, broken capillaries, and malar redness are a top coverage driver — but full coverage to hide them reads heavy. A real tension, often leading to green color-correctors.</p>
+    <blockquote class="quote">“I have significant redness and rosacea through my cheeks so concealer or foundation is a non-negotiable for me.”<cite>45+ · r/45PlusSkincare</cite></blockquote>
+    <div class="chips">
+      <span class="chip">Affects: <b>foundation, CC cream, corrector</b></span>
+      <span class="chip">Threads: <b>8+</b></span>
+      <span class="chip hi">Confidence: High</span>
+      <span class="chip">Mature-specific: <b>no</b></span>
+    </div>
+  </div>
+
+  <div class="rank">
+    <div class="rank-top"><div class="rank-no display">12</div><h3>Different zones, different needs — &amp; menopausal skin shifts</h3></div>
+    <p>Oily T-zone with dry cheeks/chin (often from retinoids); skin that “changed” suddenly; and foundation avoidance due to <strong>hot flashes</strong>. One product rarely suits the whole face. Also: feeling unseen by 20-something counter staff “with zero experience with mature skin.”</p>
+    <blockquote class="quote">“I don’t wear foundation due to hot flashes.”<cite>62F · r/45PlusSkincare</cite></blockquote>
+    <div class="chips">
+      <span class="chip">Affects: <b>all</b></span>
+      <span class="chip">Threads: <b>8+</b></span>
+      <span class="chip med">Confidence: Medium</span>
+      <span class="chip">Mature-specific: <b>yes</b></span>
+    </div>
+  </div>
+</section>
+
+<!-- 5 -->
+<section id="methods">
+  <div class="sec-head"><span class="sec-num">05</span><h2 class="display">The five methods, compared</h2></div>
+  <p class="lede">What each approach is, who it suits, and where it breaks — for this audience specifically.</p>
+
+  <h3>A · The full multi-step routine</h3>
+  <p><em>Primer, color corrector, foundation, concealer, setting powder, setting spray.</em> <strong>Likes:</strong> maximum control and coverage for “full-face nights,” events, heavy redness/scarring. <strong>Breaks:</strong> time, cost, and — critically — more product layers mean more settling, more mask, more aging effect on mature skin. The audience segment that wants this is shrinking with age; most are trying to <em>subtract</em> steps.</p>
+
+  <h3>B · Full-coverage foundation (liquid &amp; cream)</h3>
+  <p><strong>Likes:</strong> hides spots, scarring, melasma, redness; photographs evenly; the “all one tone” look some explicitly prefer. <strong>Breaks:</strong> the headline mature-skin failures live here — settling, oxidation, cakey, pore emphasis, masklike aging. This is the method people are actively leaving (“Double Wear is awful on me now,” “Dior collecting in my wrinkles”).</p>
+
+  <h3>C · Tinted moisturizer &amp; skin tint (incl. BB/CC, tinted serum, tinted SPF)</h3>
+  <p><strong>Likes:</strong> lightweight, hydrating, “looks like skin,” fast, often with SPF — the preferred destination for women leaving foundation. <strong>Breaks:</strong> frequently <em>not enough coverage</em> for redness/melasma/spots, can be “too dewy,” and tinted sunscreens can oxidize or run shade-dark. This is the product category Smooche most directly competes with — and the gap (coverage vs. lightness) is exactly its wedge.</p>
+
+  <h3>D · Going bare (skincare only, no complexion makeup)</h3>
+  <p><strong>Likes:</strong> freedom, “feels better,” no settling, no mask; many report their skin looks <em>younger</em> bare than foundationed. Often enabled by long-term tretinoin + diligent moisture. <strong>Breaks:</strong> no help for redness, spots, or “tired/dull” days; leaves women feeling exposed before social events. This cohort is persuadable <em>only</em> by something that doesn’t feel like foundation.</p>
+
+  <h3>E · Smooche Color-Changing Foundation</h3>
+  <p><strong>Positioned as:</strong> a medium-coverage, “adapts to your tone,” 16-hour, SPF-15, hydrating one-ish-step foundation for mature skin. <strong>Independent reality (desk research):</strong> light-to-medium coverage, a single effective shade within a fair-to-medium range, mixed mature-skin results, real shipping/refund complaints. Its honest home is category C — a slightly-more-coverage skin-tint alternative — <em>not</em> a true full-coverage foundation and <em>not</em> a magic shade-matcher.</p>
+
+  <div class="scroll">
+    <table class="cmp">
+      <thead><tr><th>Method</th><th>Core benefit</th><th>Main drawback (45+)</th><th>Best-fit customer</th><th>Evidence strength</th></tr></thead>
+      <tbody>
+        <tr><td>Full routine</td><td>Max coverage &amp; control</td><td>Most steps → most mask/aging</td><td>Events, heavy scarring/redness</td><td>High</td></tr>
+        <tr><td>Full-coverage foundation</td><td>Hides spots, even tone</td><td>Settles, oxidizes, ages</td><td>Wants concealment, tolerates heaviness</td><td>High</td></tr>
+        <tr><td>Tinted moisturizer / skin tint</td><td>Light, hydrating, “like skin”</td><td>Often too little coverage / too dewy</td><td>Wants natural + fast</td><td>High</td></tr>
+        <tr><td>Going bare</td><td>No mask, feels free</td><td>No help for redness/spots/dull days</td><td>Good skin, minimalist</td><td>High</td></tr>
+        <tr><td>Smooche</td><td>Medium cover, light feel, guarantee</td><td>1 effective shade; claim overreach</td><td>Fair–medium, wants tint-plus-coverage</td><td>Moderate (indirect)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 6 -->
+<section id="evidence">
+  <div class="sec-head"><span class="sec-num">06</span><h2 class="display">Reddit evidence table</h2></div>
+  <p class="lede">Representative primary sources with community, date, and verbatim. Links open the original threads. Ages are as stated by the poster.</p>
+  <div class="scroll">
+    <table>
+      <thead><tr><th>Community</th><th>Date</th><th>Theme</th><th>Verbatim</th><th>Source</th></tr></thead>
+      <tbody>
+        <tr><td>r/45PlusSkincare</td><td>2025-10-26</td><td>Settling (52F)</td><td class="q">“Every foundation that I try looks awful with my wrinkles.”</td><td><a href="https://www.reddit.com/r/45PlusSkincare/comments/1ogk2kk/recommendations_for_a_foundation/">thread</a></td></tr>
+        <tr><td>r/45PlusSkincare</td><td>2024-03-04</td><td>Abandoning foundation (60F)</td><td class="q">“It makes me look older, emphasizes lines. Even BB creams look bad.”</td><td><a href="https://www.reddit.com/r/45PlusSkincare/comments/1b6fmbs/no_foundation/">thread</a></td></tr>
+        <tr><td>r/over60</td><td>2026-03-24</td><td>Quit foundation (62F)</td><td class="q">“I stopped using foundation a few yrs ago because ALL foundations would settle into my fine lines and wrinkles!”</td><td><a href="https://www.reddit.com/r/over60/comments/1s24nug/heres_my_secret_at_age_62_to_a_nofoundation/">thread</a></td></tr>
+        <tr><td>r/MatureBeauty</td><td>2026-09-12</td><td>Oxidation (52F)</td><td class="q">“I’ve been noticing I’m looking orange by midday.”</td><td><a href="https://www.reddit.com/r/MatureBeauty/comments/1web6du/foundation_recommendations_im_52_and_i_like_the/">thread</a></td></tr>
+        <tr><td>r/45PlusSkincare</td><td>2025-03-24</td><td>Oxidation + dry (55F)</td><td class="q">“Best drugstore foundation that will not settle in lines and won’t oxidize on my old dry skin?”</td><td><a href="https://www.reddit.com/r/45PlusSkincare/comments/1jiut4d/drugstore_foundation/">thread</a></td></tr>
+        <tr><td>r/45PlusSkincare</td><td>2025-02-21</td><td>Dry/patchy (46F)</td><td class="q">“Everything looks dry and patchy within 5 minutes. I am so frustrated.”</td><td><a href="https://www.reddit.com/r/45PlusSkincare/comments/1iusixd/please_give_me_your_recommendations_tinted/">thread</a></td></tr>
+        <tr><td>r/45PlusSkincare</td><td>2026-04-22</td><td>Pores (45+)</td><td class="q">“Worst of all they just settled into my pores after a few hours.”</td><td><a href="https://www.reddit.com/r/45PlusSkincare/comments/1ss6t64/pores_alternative_to_foundation/">thread</a></td></tr>
+        <tr><td>r/45PlusSkincare</td><td>2026-07-09</td><td>Shade/undertone (49F)</td><td class="q">“[Something that] knows light skin girls aren’t all pink… won’t sink into my pores.”</td><td><a href="https://www.reddit.com/r/45PlusSkincare/comments/1urxpo3/foundation_recommendation/">thread</a></td></tr>
+        <tr><td>r/MatureBeauty</td><td>2024-06-06</td><td>Repeat-buy fatigue</td><td class="q">“I really don’t want to spend $50 ten times trying to find it.”</td><td><a href="https://www.reddit.com/r/MatureBeauty/comments/1d9g2au/foundation_woes/">thread</a></td></tr>
+        <tr><td>r/45PlusSkincare</td><td>2026-05-10</td><td>Persona wishlist (46F)</td><td class="q">“Part of me is starting to want to avoid being seen… I want freckles, blemishes, and lines as hidden as possible… makes me look LESS old, not more.”</td><td><a href="https://www.reddit.com/r/45PlusSkincare/comments/1t8wjsz/ugh_i_tried_another_wellknown_longwear_foundation/">thread</a></td></tr>
+        <tr><td>r/45PlusSkincare</td><td>2025-07-17</td><td>Hot flashes (62F)</td><td class="q">“I don’t wear foundation due to hot flashes.”</td><td><a href="https://www.reddit.com/r/45PlusSkincare/comments/1m28xs7/im_62/">thread</a></td></tr>
+        <tr><td>r/45PlusSkincare</td><td>2024-08-12</td><td>Feeling unseen</td><td class="q">“It’s always some 20 year old who has zero experience w mature skin.”</td><td><a href="https://www.reddit.com/r/45PlusSkincare/comments/1eqc4bf/foundation/">thread</a></td></tr>
+        <tr><td>r/MakeupAddiction</td><td>2025-10-26</td><td>Color-changing = gimmick</td><td class="q">“It’s all bullshit… it’s one color no matter who you try it on. The only reason it fits many is it has super little coverage.”</td><td><a href="https://www.reddit.com/r/MakeupAddiction/comments/1ogn4ya/has_anyone_tried_that_korean_color_changing/">thread</a></td></tr>
+        <tr><td>r/MakeupAddiction</td><td>2026-04-30</td><td>Color-changing on mature skin (55F)</td><td class="q">“I tried [one] because I am 55 and it was supposed to be soooo good for mature skin. Nope. Highly disappointed.”</td><td><a href="https://www.reddit.com/r/MakeupAddiction/comments/1ogn4ya/has_anyone_tried_that_korean_color_changing/">comment</a></td></tr>
+        <tr><td>r/45PlusSkincare</td><td>2026-08-27</td><td><b>Smooche direct (45+)</b></td><td class="q">“The Color Changing Foundation… changed the color of my face! To Clown White!… IT DIDN’T BUDGE! I had to use DAWN dish soap to get it off!!”</td><td><a href="https://www.reddit.com/r/45PlusSkincare/comments/1vze8e7/smooche_color_changing_foundation/">thread</a></td></tr>
+        <tr><td>r/ReviewsThatMakeSense</td><td>2026-05-20</td><td><b>Smooche direct (buyer psych)</b></td><td class="q">“Too much AI in ads and I’m not willing to part with more than $25 on something that doesn’t work.”</td><td><a href="https://www.reddit.com/r/ReviewsThatMakeSense/comments/1tidu98/smooche_foundation_tested_by_2_girls_genuine/">thread</a></td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 7 -->
+<section id="science">
+  <div class="sec-head"><span class="sec-num">07</span><h2 class="display">Scientific &amp; expert findings</h2></div>
+
+  <h3>Even skin tone reads as younger — a perception finding, used carefully</h3>
+  <p>Peer-reviewed work by <strong>Matts, Fink and colleagues</strong> shows that the <em>homogeneity</em> (evenness) of visible skin coloration — the distribution of melanin and haemoglobin — independently drives how old, healthy, and attractive a face is judged to be. More even tone is perceived as younger; melanin evenness is the stronger cue for <em>age</em>, haemoglobin evenness for <em>health/attractiveness</em>.</p>
+  <p><strong>What it establishes:</strong> evening out tone genuinely makes a face <em>read</em> younger to observers — a legitimate basis for “even tone looks more youthful.” <strong>What it does NOT establish:</strong> that any specific product delivers that evenness, that makeup is “anti-aging,” or that the effect is anything but visual/perceptual. Design: observer ratings of manipulated facial images; not a product trial. <em>Avoid turning this into “clinically proven to make you look younger.”</em></p>
+
+  <h3>Why foundation settles into lines — it’s mostly skin + formula, not magic</h3>
+  <p>Dermatology/cosmetic-chemistry consensus: dehydrated mature skin wicks moisture out of the foundation, and pigment pools in creases; heavy, matte, and especially <strong>powder</strong> formulas accentuate lines, while humectants (glycerin, hyaluronic acid) and emollients (squalane) reduce settling. This means settling is substantially a function of <strong>skin hydration and formula type</strong>, not a mysterious product defect — an honest, credible framing for ads and a reason a hydrating formula can legitimately perform better.</p>
+
+  <h3>SPF in foundation is not adequate sun protection</h3>
+  <p>The American Academy of Dermatology and multiple dermatologists note that real-world makeup is applied far thinner than the ~2&nbsp;mg/cm² (about ¼ tsp for the face) needed to reach a labeled SPF, and misses the hairline, ears, and neck. <strong>Smooche’s SPF 15 cannot be presented as sun protection</strong> — at most a bonus layered over a dedicated broad-spectrum SPF 30+.</p>
+
+  <div class="note">
+    <span class="lab">The one claim the category can’t support</span>
+    Independent testers and cosmetic chemists are unanimous that <strong>no topical “adapts to your skin tone” mechanism exists</strong>. These products are a white base with encapsulated pigment beads that burst on rubbing and resolve to <em>one</em> fixed shade for everyone; the “fit” comes from sheerness, not intelligence. Treat any “matches your unique undertone” language as scientifically unsupported.
+  </div>
+</section>
+
+<!-- 8 -->
+<section id="audit">
+  <div class="sec-head"><span class="sec-num">08</span><h2 class="display">Smooche claims audit</h2></div>
+  <p class="lede">Each marketing claim graded against the evidence. <span style="color:var(--good);font-weight:600">Verified</span> = supported. <span style="color:var(--warn);font-weight:600">Plausible/unverified</span> = could be true, needs your own product testing. <span style="color:var(--bad);font-weight:600">Unsupported/misleading</span> = evidence is against it or it overreaches.</p>
+
+  <div class="claim"><span class="verdict v-bad">Misleading</span><div><p class="c-claim">“Adapts to your unique skin tone / undertone”</p><p class="c-body">Mechanism debunked by chemists and testers; resolves to one shade. Independent reviews confirm limited effective range and “nothing color-changing is going on.” Highest legal/credibility risk claim.</p></div></div>
+
+  <div class="claim"><span class="verdict v-bad">Unsupported</span><div><p class="c-claim">“Suitable for all skin tones”</p><p class="c-body">Page itself says “fair to medium”; independent reviews report ashy/grey cast on deep tones and white cast on fair. Do not imply universal range.</p></div></div>
+
+  <div class="claim"><span class="verdict v-warn">Needs testing</span><div><p class="c-claim">“No oxidation / stays true”</p><p class="c-body">Some independent reviewers report turning orange within ~2 hrs; brand reviews claim the opposite. Unresolvable from desk research — <strong>requires controlled wear testing before use in ads.</strong></p></div></div>
+
+  <div class="claim"><span class="verdict v-warn">Needs testing</span><div><p class="c-claim">“16-hour wear” &amp; “doesn’t settle into fine lines”</p><p class="c-body">Plausible for a hydrating, lighter-coverage formula (consistent with the science on humectants), but wear-time and anti-settling are product-specific performance claims that must be measured, not assumed.</p></div></div>
+
+  <div class="claim"><span class="verdict v-warn">Plausible</span><div><p class="c-claim">“Lightweight / doesn’t feel heavy or mask-like”</p><p class="c-body">Consistent with it being a light-to-medium formula and with some positive mature-skin reviews. Defensible — but frame as typical experience, not universal (some report “caked like Halloween paint”).</p></div></div>
+
+  <div class="claim"><span class="verdict v-warn">Plausible</span><div><p class="c-claim">“Medium coverage / blurs blemishes &amp; redness”</p><p class="c-body">Independent sources agree it’s light-to-medium and “won’t hide acne or dark circles.” Safe to say it <em>evens and blurs</em>; unsafe to imply <em>full coverage</em> or spot concealment.</p></div></div>
+
+  <div class="claim"><span class="verdict v-warn">Plausible</span><div><p class="c-claim">“Dermatologist-tested, non-comedogenic, hydrating (glycerin)”</p><p class="c-body">Ingredient list supports hydration; “dermatologist-tested” is a low-bar term (tested ≠ recommended/proven). Usable with precise wording; keep receipts.</p></div></div>
+
+  <div class="claim"><span class="verdict v-bad">Misleading</span><div><p class="c-claim">SPF 15 framed as sun protection</p><p class="c-body">Scientifically inadequate as standalone sun care (see §7). Position only as a minor bonus over real sunscreen.</p></div></div>
+
+  <div class="claim"><span class="verdict v-warn">Verify methodology</span><div><p class="c-claim">Panel stats: “97% matched instantly / 98% blemishes invisible / 95% not heavy”</p><p class="c-body">Brand-supplied; sample size, panel design, and wording unknown. Do not reuse without documented methodology — these read as classic unverifiable DR panel numbers.</p></div></div>
+
+  <div class="claim"><span class="verdict v-warn">Verify &amp; fix</span><div><p class="c-claim">“30-day money-back guarantee”</p><p class="c-body">Independent reviews flag a contradiction with a 14-day unused-return window and report refund friction / chargebacks and a BBB “F.” A guarantee is a strong motivator for this distrustful audience — but it must be real and frictionless or it backfires.</p></div></div>
+
+  <div class="claim"><span class="verdict v-bad">Misleading</span><div><p class="c-claim">Korean heritage / “30 years” testimonials</p><p class="c-body">Independent reporting: brand is West Hollywood-based, founded 2021; “30 years of use” testimonials are implausible for a recent launch. Drop any heritage/longevity framing.</p></div></div>
+</section>
+
+<!-- 9 -->
+<section id="positioning">
+  <div class="sec-head"><span class="sec-num">09</span><h2 class="display">Competitive positioning</h2></div>
+  <p><strong>The credible wedge:</strong> position Smooche in the gap between “foundation that ages me” and “skin tint that doesn’t cover enough” — a <em>hydrating, light-feel, medium-blur complexion product for women whose foundation stopped working</em>. That sits on the three strongest, best-evidenced, most emotional pains (#1 settling, #2 masklike/aging, #7 coverage gap) without over-claiming.</p>
+  <h3>Problems that are most emotionally important</h3>
+  <p>“Makes me look older” (#2) and settling into lines (#1) — because they attack identity and are felt in front of other people. Oxidation (#3) is the most <em>visceral/shareable</em> (orange face).</p>
+  <h3>Problems that span multiple methods (broadest reach)</h3>
+  <p>Settling, oxidation, shade-matching, and coverage-vs-lightness all recur across full-coverage, BB/CC, <em>and</em> tinted SPF — so creative built on them resonates whether she currently wears foundation, skin tint, or nothing.</p>
+  <h3>Credible differentiators to lead with</h3>
+  <ul>
+    <li><strong>“Feels like skin, not a mask”</strong> + <strong>hydrating / doesn’t cling to dry patches</strong> — backed by the humectant science and the audience’s own vocabulary.</li>
+    <li><strong>One easy step vs. the 6-step routine</strong> — speaks to the simplicity desire (#9) and the “5-minute face.”</li>
+    <li><strong>A genuine, frictionless money-back guarantee</strong> — directly answers repeat-buy fatigue and distrust (#8). Only if operationally true.</li>
+    <li><strong>Made for how your skin is now</strong> — the “my skin changed / nobody at the counter gets it” emotional territory (#12), without medical over-claim.</li>
+  </ul>
+  <h3>Competitor criticisms that would be unfair or too broad</h3>
+  <p>Don’t claim <em>all</em> foundations age you (many here love Laura Geller, NARS Light Reflecting, Chantecaille, tinted serums) — attack the <em>experience</em>, not the whole category. Don’t imply drugstore = bad (this audience loves sub-$10 BB creams). Don’t promise it fixes rosacea/scarring (that’s full-coverage territory it can’t own).</p>
+  <h3>Poor-fit segments to screen out (ethically and for ROAS)</h3>
+  <p>Deep skin tones (shade range + grey cast), anyone needing true full coverage for heavy melasma/scarring/acne, and fragrance- or very-dry-skin-sensitive users who report it drying. Targeting them invites returns and 1-star reviews.</p>
+
+  <div class="note brand-signal">
+    <span class="lab">Brand signal — Smooche’s own ads (not consumer evidence)</span>
+    Across <strong>440 of Smooche’s own video ads</strong> (Supabase corpus), the brand already leans on the verified pains — settling, oxidation, “drugstore foundation highlights every wrinkle,” “never buy the wrong shade again” — plus an <strong>anti-Botox</strong> spine (“Why women 50+ choose this over Botox”), makeup-artist authority, emotional divorce/“younger woman” stories, and heavy scarcity/BOGO offers. Useful as positioning intelligence; it is <em>brand marketing, not proof of performance</em>, and the anti-Botox + “adapts to you” leaps are exactly the claims flagged above as high-risk.
+  </div>
+</section>
+
+<!-- 10 -->
+<section id="angles">
+  <div class="sec-head"><span class="sec-num">10</span><h2 class="display">Ten advertising angles</h2></div>
+  <p class="lede">Each grounded in a verified pain and written to sidestep the unsupported “adapts to you” mechanism. Treat as directions for the copywriter, not finished scripts.</p>
+
+  <div class="angle"><div class="a-name"><span>A1</span>“The day my foundation turned on me”</div><p>The betrayal narrative — the makeup that worked for 20 years now sits in the lines. Pain #1 + #2. Highest emotional pull.</p></div>
+  <div class="angle"><div class="a-name"><span>A2</span>“I stopped wearing foundation. Then I found the in-between.”</div><p>Speaks to the going-bare migrator (#2, #7): she quit because of the mask; this is coverage that doesn’t feel like foundation.</p></div>
+  <div class="angle"><div class="a-name"><span>A3</span>“Looks like skin, not like makeup”</div><p>The anti-mask promise in her own words. Lean on finish/feel, not full coverage. Pain #2 + #5.</p></div>
+  <div class="angle"><div class="a-name"><span>A4</span>“Why it doesn’t sink into your lines” (the hydration reason)</div><p>Educational/credible: dry skin pulls moisture from foundation; a hydrating formula resists it. Pain #1, backed by §7 science.</p></div>
+  <div class="angle"><div class="a-name"><span>A5</span>“No orange. No midday surprise.”</div><p>Owns the oxidation fear (#3) — the most visceral, shareable pain. <em>Gated on wear-testing proving it.</em></p></div>
+  <div class="angle"><div class="a-name"><span>A6</span>“One step instead of six”</div><p>Simplicity for the 5-minute face (#9). Contrast with the primer→corrector→foundation→concealer→powder→spray pile.</p></div>
+  <div class="angle"><div class="a-name"><span>A7</span>“For the skin you have now”</div><p>The menopausal/changed-skin reframe (#12) — validation that her skin changed and most products never caught up.</p></div>
+  <div class="angle"><div class="a-name"><span>A8</span>“Tired of spending $50 ten times”</div><p>Repeat-buy fatigue + distrust (#8). Pair with a real, frictionless guarantee.</p></div>
+  <div class="angle"><div class="a-name"><span>A9</span>“The ‘before people see me’ product”</div><p>Social-stakes angle — wedding, new job, the first date in 22 years. Not vanity; confidence in a specific moment.</p></div>
+  <div class="angle"><div class="a-name"><span>A10</span>“An even tone is what reads as rested” (careful science)</div><p>Uses the Matts/Fink evenness-→-younger finding as perception, not a medical anti-aging claim. Pain #11 + identity.</p></div>
+</section>
+
+<!-- hooks -->
+<section id="hooks" style="padding-top:34px;">
+  <div class="sec-head"><span class="sec-num">—</span><h2 class="display">Fifteen hooks</h2></div>
+  <p class="lede">Built from the audience’s real vocabulary. The caption under each notes the pain and any claim-safety flag. Human-sounding first lines, not slogans.</p>
+  <ol class="hooks">
+    <li>“My foundation used to make me look good. Now it just finds every line I have.”<em>Pain #1 · betrayal open · safe</em></li>
+    <li>“I didn’t get older overnight. My foundation just stopped keeping up.”<em>Pain #2/#12 · reframe · safe</em></li>
+    <li>“Somewhere around 52, foundation started sitting <em>in</em> my wrinkles instead of over them.”<em>Pain #1 · age-specific · safe</em></li>
+    <li>“I quit foundation two years ago. I’m 61. Here’s what finally brought me back.”<em>Pain #2 · migrator · safe</em></li>
+    <li>“If your foundation looks fine at 8am and orange by lunch, this is for you.”<em>Pain #3 · gate on wear test</em></li>
+    <li>“I have a drawer of $50 foundations that lied to me.”<em>Pain #8 · distrust · pair with guarantee</em></li>
+    <li>“Everyone kept saying ‘it looks like skin.’ I forgot what that even meant on my face.”<em>Pain #2/#5 · safe</em></li>
+    <li>“The problem was never your skin. It was six products fighting on top of it.”<em>Pain #9 · simplicity · safe</em></li>
+    <li>“My skin got drier. Nobody at the makeup counter seemed to notice.”<em>Pain #12 · feeling unseen · safe</em></li>
+    <li>“I wanted to even things out — not wear a mask to the grocery store.”<em>Pain #2 · safe</em></li>
+    <li>“Tinted moisturizer was too little. Full coverage made me look older. I needed the in-between.”<em>Pain #7 · the wedge · safe</em></li>
+    <li>“First date in 22 years. The only thing I didn’t want to think about was my face.”<em>Pain + social stakes · safe</em></li>
+    <li>“It’s not that I want to look 30. I just don’t want to look <em>tired</em>.”<em>Identity · safe</em></li>
+    <li>“One step. Because I don’t have a makeup artist and I don’t have 40 minutes.”<em>Pain #9 · safe</em></li>
+    <li>“If it doesn’t work on your skin, send it back. That’s the whole deal.”<em>Pain #8 · only if guarantee is real &amp; frictionless</em></li>
+  </ol>
+</section>
+
+<!-- 11 -->
+<section id="avoid">
+  <div class="sec-head"><span class="sec-num">11</span><h2 class="display">Claims to avoid</h2></div>
+  <div class="avoid">
+    <ul>
+      <li><strong>“Adapts / changes to YOUR unique skin tone or undertone.”</strong> Mechanism is debunked; this audience’s experts call it a scam. Reputational and FTC-substantiation risk.</li>
+      <li><strong>“For all skin tones” / implying a wide deep range.</strong> It’s fair-to-medium; deep tones report grey cast.</li>
+      <li><strong>“Full coverage” / “hides acne, scarring, dark circles, melasma.”</strong> It’s light-to-medium; over-promising drives returns and 1-stars.</li>
+      <li><strong>“SPF protects you from the sun.”</strong> SPF 15 at makeup thickness is not adequate protection.</li>
+      <li><strong>“No oxidation / 16-hour wear” as fact</strong> — until your own controlled testing proves it.</li>
+      <li><strong>Panel percentages (97/98/95%)</strong> without documented methodology.</li>
+      <li><strong>Korean heritage / decades-of-use testimonials.</strong> Brand is recent and US-based per independent reporting.</li>
+      <li><strong>“Clinically proven to make you look younger.”</strong> The evenness research is perceptual, not a product anti-aging proof.</li>
+      <li><strong>“Replaces Botox.”</strong> Makeup vs. a medical procedure is a false equivalence and a claims-risk.</li>
+      <li><strong>Blanket “all foundations age you.”</strong> Unfair and contradicted by this audience’s own loved products — attack the experience, not the category.</li>
+    </ul>
+  </div>
+</section>
+
+<!-- 12 -->
+<section id="bib">
+  <div class="sec-head"><span class="sec-num">12</span><h2 class="display">Source bibliography</h2></div>
+  <ul class="bib">
+    <li><strong>Reddit — mature-skin foundation pain:</strong> <a href="https://www.reddit.com/r/45PlusSkincare/comments/1b6fmbs/no_foundation/">r/45PlusSkincare “No foundation” (60F, ~30 replies)</a> · <a href="https://www.reddit.com/r/45PlusSkincare/comments/1ogk2kk/recommendations_for_a_foundation/">“Recommendations for a foundation” (52F)</a> · <a href="https://www.reddit.com/r/45PlusSkincare/comments/1jiut4d/drugstore_foundation/">“Drugstore foundation” (55F, oxidation)</a> · <a href="https://www.reddit.com/r/45PlusSkincare/comments/1t8wjsz/ugh_i_tried_another_wellknown_longwear_foundation/">“UGH another longwear” (46F wishlist)</a> · <a href="https://www.reddit.com/r/45PlusSkincare/comments/1ss6t64/pores_alternative_to_foundation/">“Pores: alternative to foundation?”</a> · <a href="https://www.reddit.com/r/45PlusSkincare/comments/1m28xs7/im_62/">“I’m 62” (hot flashes)</a> · <a href="https://www.reddit.com/r/45PlusSkincare/comments/1eqc4bf/foundation/">“Where does one even go to try makeup”</a></li>
+    <li><strong>Reddit — r/MatureBeauty:</strong> <a href="https://www.reddit.com/r/MatureBeauty/comments/1d9g2au/foundation_woes/">“Foundation Woes”</a> · <a href="https://www.reddit.com/r/MatureBeauty/comments/1web6du/foundation_recommendations_im_52_and_i_like_the/">“52, no-makeup makeup” (orange by midday)</a> · <a href="https://www.reddit.com/r/MatureBeauty/comments/1nicgjz/my_dry_skin_makes_all_under_eye_makeup_look/">“Dry skin / under-eye makeup”</a></li>
+    <li><strong>Reddit — going bare / no-foundation:</strong> <a href="https://www.reddit.com/r/over60/comments/1s24nug/heres_my_secret_at_age_62_to_a_nofoundation/">r/over60 “my secret at 62 to no-foundation”</a></li>
+    <li><strong>Reddit — color-changing category:</strong> <a href="https://www.reddit.com/r/MakeupAddiction/comments/1ogn4ya/has_anyone_tried_that_korean_color_changing/">r/MakeupAddiction “Has anyone tried that color-changing foundation?” (74 comments)</a></li>
+    <li><strong>Reddit — Smooche direct:</strong> <a href="https://www.reddit.com/r/45PlusSkincare/comments/1vze8e7/smooche_color_changing_foundation/">r/45PlusSkincare “Smooche ??Color Changing Foundation??”</a> · <a href="https://www.reddit.com/r/ReviewsThatMakeSense/comments/1tidu98/smooche_foundation_tested_by_2_girls_genuine/">r/ReviewsThatMakeSense Smooche test</a></li>
+    <li><strong>Smooche:</strong> <a href="https://smooche.com/products/color-changing-foundation">Official product page</a></li>
+    <li><strong>Independent Smooche reviews:</strong> <a href="https://modernlens.blog/is-smooche-foundation-legit/">ModernLens “Is Smooche legit?”</a> · <a href="https://derealestreviews.com/smooche-color-changing-foundation-reviews-2026/">DeRealest Reviews</a> · <a href="https://ca.trustpilot.com/review/smooche.com">Trustpilot (~3,697 reviews)</a></li>
+    <li><strong>Science — skin-tone evenness &amp; perceived age:</strong> <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC2780675/">Fink et al., facial coloration &amp; perceived health (PMC)</a> · <a href="https://onlinelibrary.wiley.com/doi/abs/10.1111/j.1468-3083.2011.04316.x">Fink/Matts, colour homogeneity &amp; perception (JEADV)</a></li>
+    <li><strong>Science — settling &amp; SPF:</strong> <a href="https://www.formulate.co/journal/p/how-to-keep-foundation-from-settling-into-wrinkles">Formulate: why foundation settles</a> · <a href="https://www.aad.org/media/stats-sunscreen">AAD sunscreen facts</a> · <a href="https://www.scmp.com/magazines/style/beauty/wellness/article/3284406/your-make-ups-spf-doing-enough-protect-your-skin-dermatologists-weigh-spf-foundations-efficacy">Dermatologists on SPF in makeup</a></li>
+  </ul>
+</section>
+
+<footer>
+  Compiled 10 Oct 2026 from public Reddit discussions (US women 45+), the live Smooche product page, independent review sources, peer-reviewed dermatology literature, and Smooche’s own ad corpus (held separate as brand signal). Reddit is a self-selected sample; themes are qualitative, not population prevalence. Claims marked “needs testing” require verification on the actual product before use in advertising.
+</footer>
+
+</div>

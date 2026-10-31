@@ -35,8 +35,9 @@ const { extractTranscript } = require('../scraper/extract');
 const { captureShareUrl } = require('../scraper/share');
 const { openAdDetails, closeAdDetails } = require('../scraper/details');
 const { extractOverviewFields } = require('../scraper/overview');
+const { navigateToBrandByUrl } = require('../scraper/navigation');
 const { upsertAd, getExistingMediaIds } = require('../supabase/adsRepository');
-const { findBrands, getDiscoveredPages, getBrandLanderDomains } = require('./pagesRepository');
+const { findBrands, getDiscoveredPages, getBrandLanderDomains, ensurePage } = require('./pagesRepository');
 
 const T = 15000;
 const MAX_SCROLL_ROUNDS = 500;
@@ -188,6 +189,24 @@ function hostOf(url) {
   try { return new URL(url).hostname.replace(/^www\./i, '').toLowerCase(); } catch { return null; }
 }
 
+// Multi-label public suffixes we might realistically hit, so registrableDomain
+// keeps the right number of labels (e.g. brand.co.uk, not just co.uk).
+const MULTI_LABEL_SUFFIXES = new Set(['co.uk', 'com.au', 'co.nz', 'com.br', 'co.za', 'com.mx']);
+
+/**
+ * Registrable ("base") domain of a hostname: strips subdomains so a brand's
+ * own subdomains (quiz.smooche.com, pre.smooche.com) all reduce to smooche.com.
+ * This is what lets the domain filter keep the brand domain AND any subdomain
+ * of it (e.g. quiz funnels), while still rejecting entirely different domains.
+ */
+function registrableDomain(host) {
+  if (!host) return null;
+  const parts = host.split('.');
+  if (parts.length <= 2) return host;
+  const lastTwo = parts.slice(-2).join('.');
+  return MULTI_LABEL_SUFFIXES.has(lastTwo) ? parts.slice(-3).join('.') : lastTwo;
+}
+
 /**
  * Cheaply read ONLY an ad's landing-page host by opening Details and reading
  * the Overview — WITHOUT opening the transcript tab (the slow part). Lets a
@@ -219,6 +238,9 @@ async function collectPageAds(context, page, brandId, pageId, seenIds, maxAds, a
   if (!appeared) { warn('LAYERB', '  no ad cards for this page — nothing to collect.'); return { saved: 0, filtered: 0, errors: 0, backendFailures: 0 }; }
 
   const filterOn = allowedDomains && allowedDomains.size > 0;
+  // A host is on-brand if its registrable domain matches one of the brand's —
+  // so subdomains (quiz.smooche.com) pass while foreign domains don't.
+  const hostAllowed = (host) => allowedDomains.has(registrableDomain(host));
   let saved = 0, filtered = 0, errors = 0, backendFailures = 0, examined = 0;
 
   for (let round = 0; round < MAX_SCROLL_ROUNDS && examined < maxAds; round++) {
@@ -240,7 +262,7 @@ async function collectPageAds(context, page, brandId, pageId, seenIds, maxAds, a
       // peek can't read a host, fall through — the post-process check still guards.
       if (filterOn) {
         const peekHost = await peekLanderHost(page, card);
-        if (peekHost && !allowedDomains.has(peekHost)) {
+        if (peekHost && !hostAllowed(peekHost)) {
           filtered++;
           log('LAYERB', `    -> filtered out (off-brand: ${peekHost}) — skipped before transcript.`);
           continue;
@@ -250,7 +272,7 @@ async function collectPageAds(context, page, brandId, pageId, seenIds, maxAds, a
       try {
         const ad = await processOneAd(context, page, card, mediaId, summary);
         const host = hostOf(ad.landingPage);
-        if (filterOn && !allowedDomains.has(host)) {
+        if (filterOn && !hostAllowed(host)) {
           filtered++;
           log('LAYERB', `    -> filtered out (off-brand lander: ${host || 'none'}).`);
           continue;
@@ -274,15 +296,71 @@ async function collectPageAds(context, page, brandId, pageId, seenIds, maxAds, a
 
 let context;
 
+/**
+ * Direct-URL single-page scrape: the user pastes a GetHook page link + a name
+ * instead of relying on Ad Library discovery (findPages) + GetHook search —
+ * which the Oct-2026 app rework broke (result clicks no longer navigate). We
+ * record the page under the brand (whitelist by default), go straight to its
+ * URL, and file EVERY ad on it under (brandId, pageId). No domain filtering:
+ * this page IS the 3rd-party account, so all its ads are attributed to the
+ * brand regardless of landing domain. Ads already under the brand (e.g. on its
+ * main page) are pre-seeded into seenIds and skipped, never re-saved.
+ */
+async function runDirectPageScrape(brand, { pageName, url, type, maxAds, inspect }) {
+  const pageId = await ensurePage(brand.id, pageName, { type, pageUrl: url });
+  log('LAYERB', `Page "${pageName}" -> pages.id=${pageId} (type=${type}) under brand "${brand.name}" (id=${brand.id}).`);
+
+  verifyChromeIsInstalled();
+  ensureProfileDir();
+  warnIfLocked();
+  context = await chromium.launchPersistentContext(PROFILE_DIR, {
+    channel: 'chrome',
+    headless: false,
+    chromiumSandbox: true,
+    // Same anti-"insecure browser" flags as the main launcher, so a required
+    // Google re-login isn't blocked (see src/browser/launch.js).
+    ignoreDefaultArgs: ['--enable-automation'],
+    args: ['--disable-blink-features=AutomationControlled'],
+  });
+  const page = context.pages()[0] || (await context.newPage());
+  await page.goto(TARGET_URL, { waitUntil: 'domcontentloaded' });
+  await page.waitForLoadState('load', { timeout: LOAD_EVENT_TIMEOUT_MS }).catch(() => {});
+  await ensureLoggedIn(page);
+
+  // Pre-seed the brand's existing media_ids so an ad already stored (e.g. on the
+  // main page) is skipped rather than re-saved or reassigned to this page.
+  const seenIds = new Set(await getExistingMediaIds(brand.id).catch(() => []));
+
+  await navigateToBrandByUrl(page, url);
+  await applyBrandFilters(page);
+
+  // Empty allowedDomains => collectPageAds saves every ad (no domain filter).
+  const r = await collectPageAds(context, page, brand.id, pageId, seenIds, maxAds, new Set());
+
+  console.log('\n----- DIRECT PAGE SCRAPE SUMMARY -----');
+  console.log(`Brand: ${brand.name} (id=${brand.id})`);
+  console.log(`Page:  ${pageName} (page_id=${pageId}, type=${type})`);
+  console.log(`URL:   ${url}`);
+  console.log(`Saved: ${r.saved}   Errors: ${r.errors}   Backend-fail (GetHook couldn't transcribe): ${r.backendFailures}`);
+
+  if (inspect) await askQuestion('\n--inspect: browser open. Press Enter to close...\n');
+  await context.close();
+  log('LAYERB', 'Done.');
+}
+
 async function main() {
   const { flags, positional, opts } = parseArgs(process.argv.slice(2));
   const brandQuery = positional[0];
   const maxAds = Number(opts['max-ads'] || 25);
   const onlyPage = opts.page || null;
+  // Comma-separated page names to exclude (e.g. Ad Library false positives that
+  // matched the domain search but aren't this brand). Matched the same way as
+  // --page: a normalized substring test. Purely subtractive and optional.
+  const skipList = (opts.skip || '').split(',').map((s) => norm(s)).filter(Boolean);
   const inspect = flags.has('--inspect');
 
   if (!brandQuery) {
-    console.error('Usage: node src/adlibrary/scrapePages.js "Brand Name" [--max-ads=25] [--page="Name"] [--inspect]');
+    console.error('Usage: node src/adlibrary/scrapePages.js "Brand Name" [--max-ads=25] [--page="Name"] [--skip="A,B"] [--inspect]');
     process.exit(1);
   }
 
@@ -290,13 +368,40 @@ async function main() {
   if (brands.length === 0) { error('LAYERB', `No brand matching "${brandQuery}".`); process.exit(1); }
   const brand = brands[0];
 
+  // Direct-URL single-page mode (preferred post-app-update): paste the page's
+  // GetHook link + a name, scrape it straight, file all its ads under the brand.
+  if (opts.url) {
+    if (!opts.page) {
+      error('LAYERB', '--url requires --page="Page Name" (what to call this 3rd-party page).');
+      process.exit(1);
+    }
+    await runDirectPageScrape(brand, {
+      pageName: opts.page,
+      url: opts.url,
+      type: opts.type || 'whitelist',
+      maxAds,
+      inspect,
+    });
+    return;
+  }
+
   // Only save ads whose landing page points at one of the brand's own domains —
   // the guard for multi-brand creator/whitelist pages (see collectPageAds).
-  const allowedDomains = new Set(await getBrandLanderDomains(brand.id));
-  log('LAYERB', `Domain filter: keeping only ads landing on [${[...allowedDomains].join(', ') || '(any — no known landers)'}].`);
+  // Reduce the brand's known lander hosts to their registrable domains so the
+  // filter keeps the brand domain AND any subdomain of it (e.g. quiz.smooche.com),
+  // while still rejecting foreign domains (animalpak.com, instagram.com, ...).
+  const allowedDomains = new Set(
+    (await getBrandLanderDomains(brand.id)).map(registrableDomain).filter(Boolean)
+  );
+  log('LAYERB', `Domain filter: keeping only ads on these domains + their subdomains [${[...allowedDomains].join(', ') || '(any — no known landers)'}].`);
 
   let pages = await getDiscoveredPages(brand.id);
   if (onlyPage) pages = pages.filter((p) => norm(p.name).includes(norm(onlyPage)));
+  if (skipList.length) {
+    const before = pages.length;
+    pages = pages.filter((p) => !skipList.some((s) => norm(p.name).includes(s)));
+    log('LAYERB', `Excluding ${before - pages.length} page(s) via --skip.`);
+  }
   if (pages.length === 0) { log('LAYERB', 'No discovered pages to scrape (run findPages.js first).'); return; }
   log('LAYERB', `Brand "${brand.name}" (id=${brand.id}) — ${pages.length} discovered page(s) to scrape, up to ${maxAds} ads each.`);
 

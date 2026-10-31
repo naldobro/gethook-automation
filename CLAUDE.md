@@ -38,10 +38,16 @@ Three tables:
 ## How to scrape
 
 ```bash
-node src/browser/launch.js
+# Preferred: paste the brand's GetHook link directly (brand name still required for storage)
+node src/browser/launch.js "HIKE Footwear" "--url=https://app.gethookd.ai/brand-spy/937298?tab=all-ads"
+
+# Fallback: brand name only (drives the Brands search — see caveat below)
+node src/browser/launch.js "HIKE Footwear"
 ```
 
-Brand name is set in `src/scraper/navigation.js`. Filters (country, language, format) are in `src/config.js`. The scraper uses a persistent Chrome profile at `.playwright-profile/` — the user's personal Chrome is never touched.
+Brand name is the first positional arg (used for storage/export/Supabase). Filters (country, language, format) are in `src/config.js` and are **auto-appended to whatever URL you pass** — so pasting a link + filters just works; don't put filter params in the link yourself. The scraper uses a persistent Chrome profile at `.playwright-profile/` — the user's personal Chrome is never touched.
+
+**GetHook app change (Oct 2026) — paste the link, don't rely on search.** GetHook reworked its app. The brand detail page is now the **Brand Spy** page `app.gethookd.ai/brand-spy/{id}` for brands you *follow/spy on in advance*; brands you don't follow still open as the normal `app.gethookd.ai/brands/{id}`. **The brand-name search (`/explore/brands`) still finds the brand but clicking the result no longer navigates to the detail page** — so the name-only fallback above is unreliable post-update. Preferred workflow: open the brand on GetHook yourself, copy the address-bar URL (either `/brand-spy/{id}` or `/brands/{id}`), and pass it via `--url=`. `navigateToBrandByUrl` accepts both shapes; `applyBrandFilters` layers the US/English/video params onto it. The initial landing page is `/explore/brands` (set by `TARGET_URL`); login is detected by waiting for the Brands tab (no terminal keypress needed), and the launcher strips Chrome's automation flags so Google OAuth doesn't block manual sign-in when the session expires.
 
 ## How to fix
 
@@ -79,6 +85,14 @@ Query Supabase for the brand's ads, run analysis, then:
 2. Save a row to `brand_analyses` with BOTH the full HTML in `markdown` AND the artifact URL in `url`
 3. Always include: `analysis_type`, `prompt_version` (what the user asked for), `model`
 
+## 8-part / 8-layer messaging blueprint — MANDATORY trigger
+
+Whenever the user asks for an **"8-part blueprint" / "8-layer blueprint"** (any wording), you MUST:
+1. **Read `docs/messaging-blueprint-methodology.md` IN FULL, line by line, first** — and run the analysis on those rules ONLY (not generic marketing knowledge).
+2. Then reply with **"I've read the whole methodology and will follow every line"**, OR explicitly list any rule you intend to skip/can't follow so the user can approve or correct — never start silently, never skip a rule silently.
+
+The two rules most often botched: **Angle is AD-specific, Unique mechanism is BRAND-specific** (a message that recurs across the brand's ads is a UM, not a one-off angle — don't produce one unique angle per ad); and **read every transcript line by line** (no shortcuts). Angle = our words, ad's single biggest selling premise, primary + `Angle (candidate)` rows that keep their removal reason in `note`. Hook = first 12–20 words (20 max), verbatim.
+
 ## Known issues & fixes applied
 
 - **Share URL clipboard race condition (fixed):** Early scrapes (RYZE batch of 94 ads) captured share URLs with a single instant clipboard read after clicking "Share ad." The clipboard often still held the previous ad's URL, causing ~36 ads to get the same wrong share_url. Fixed in `src/scraper/share.js` by writing a sentinel value to the clipboard before clicking, then polling until the clipboard content changes (up to 5s, checking every 150ms). All scrapes after this fix capture correct share URLs. The affected RYZE ads need repair via the fix scraper (`node src/browser/fix.js "RYZE Superfoods" --fix share-urls`).
@@ -94,6 +108,7 @@ Query Supabase for the brand's ads, run analysis, then:
 **Architecture (two independent collectors, brand → pages → ads):**
 - **Layer A — Meta Ad Library page finder (BUILT — `src/adlibrary/findPages.js`):** a *separate* automation from the GetHook scraper. Pivots on the brand's landing-page domains (read from its existing `ads.landing_page`): every page running ads to a brand-owned lander IS the brand. Collects page **names only** (no ad data), classifies main/whitelist/secondary, and writes new ones to `pages` under the brand (never creates a brand). Card data is text-anchored ("Library ID:" bounds each card, page name sits above "Sponsored") since Meta's classes are obfuscated. Uses Ad Library's **DEFAULT (impressions) sort** — "Most recent" was tested and buries whitelist pages behind the main account's daily volume (2 found vs 10). Stops per domain when page discovery plateaus. Run: `node src/adlibrary/findPages.js "ryze" [--max-scrolls=400] [--inspect]`. Validated on ryze (id=1): found 12 pages incl. Popsugar/FailArmy whitelist partnerships.
 - **Layer B — per-page ad scraper (BUILT — `src/adlibrary/scrapePages.js`):** takes a brand's discovered pages from `pages`, and per page: searches it in GetHook, requires a real name match (skips otherwise — never scrapes the wrong account), scrapes its ads via the existing granular pipeline, and upserts each under the REAL `brand_id` + that page's `page_id` — never a new brand. Independent of the normal scraper (own loop/storage, like fix.js). `upsertAd` gained an optional 3rd `pageId` arg (backward compatible). Run: `node src/adlibrary/scrapePages.js "ryze" [--max-ads=25] [--page="Name"]`. Validated on ryze/Shroomcoffeeshop (2 ads under brand_id=1, page_id=10). NOTE: for the branded-content "Creator with Brand" names, the GetHook search term strips the " with <brand>" suffix. Full end-to-end (findPages -> scrapePages across all pages, at scale) not yet run; only covered pages will scrape (see coverage note below).
+  - **Direct-URL page mode (BUILT — preferred post-app-update):** since the Oct-2026 GetHook rework broke the search-result click (so the discovered-pages/search path above can't navigate), the normal way to add a 3rd-party page is now to **paste its GetHook link**: `node src/adlibrary/scrapePages.js "<Brand>" --url="<page URL>" --page="<Page Name>" [--type=whitelist|secondary] [--max-ads=100]`. It `ensurePage()`s a `pages` row (whitelist by default) under the brand, navigates straight to the URL (no search), and files **every** ad on the page under `(brand_id, page_id)` — **no domain filter** in this mode (the page IS the 3rd-party account, so all its ads are the brand's). Ads already stored for the brand (e.g. on the main page) are pre-seeded into seenIds and skipped, never re-saved/reassigned. Validated on HIKE Footwear (brand 67): YOUR HEALTH JOURNAL (`/brands/2883`) → page_id=220, 98 ads saved; HIKE footprint 98 main + 98 = 196.
 
 **Data model (planned schema change):**
 - New `pages` table: `id, brand_id (FK brands), name, meta_page_id, page_url, type ('main'|'whitelist'|'secondary'), created_at`, unique `(brand_id, name)`.

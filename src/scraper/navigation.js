@@ -33,6 +33,30 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
+// A brand's detail page. GetHook reworked its app: the brand page used to be
+// /brands/{id} and is now the "Brand Spy" page /brand-spy/{id} (observed live:
+// clicking a brand result lands on /brand-spy/937298?tab=all-ads). Accept both
+// shapes so older URLs and the new ones both resolve.
+const BRAND_URL_RE = /\/(brands|brand-spy)\/\d+/;
+
+/**
+ * Wait until the page is on a brand detail URL (either shape above). Polls
+ * page.url() rather than using page.waitForURL(), because that defaults to
+ * waiting for a 'load' event and GetHook's brand navigation is a client-side
+ * (same-document) route change that doesn't reliably fire one — the same
+ * reason the rest of this module waits on elements/URLs instead of load state.
+ */
+async function waitForBrandUrl(page, timeoutMs = ACTION_TIMEOUT_MS) {
+  const deadline = Date.now() + timeoutMs;
+  while (Date.now() < deadline) {
+    if (BRAND_URL_RE.test(page.url())) return;
+    await sleep(200);
+  }
+  throw new Error(
+    `Timed out after ${timeoutMs}ms waiting for a brand detail URL; current URL is ${page.url()}.`
+  );
+}
+
 /**
  * Runs `fn`, retrying on failure. Playwright locator actions already retry
  * their own actionability checks (visible/enabled/stable) internally up to
@@ -289,7 +313,7 @@ async function clickFirstResult(page, options, brandName) {
     await chosen.click({ timeout: ACTION_TIMEOUT_MS });
   });
 
-  await page.waitForURL(/\/brands\/\d+/, { timeout: ACTION_TIMEOUT_MS });
+  await waitForBrandUrl(page);
   log('NAV', `Navigated to brand page: ${page.url()}`);
 }
 
@@ -316,15 +340,16 @@ async function navigateToBrandByUrl(page, brandUrl) {
   if (!brandUrl || !brandUrl.trim()) {
     throw new Error('navigateToBrandByUrl requires a non-empty URL.');
   }
-  if (!/\/brands\/\d+/.test(brandUrl)) {
+  if (!BRAND_URL_RE.test(brandUrl)) {
     throw new Error(
-      `"${brandUrl}" does not look like a GetHook brand URL (expected .../brands/{id}).`
+      `"${brandUrl}" does not look like a GetHook brand URL ` +
+        '(expected .../brands/{id} or .../brand-spy/{id}).'
     );
   }
 
   log('NAV', `Direct navigation to brand URL: ${brandUrl}`);
   await page.goto(brandUrl, { waitUntil: 'domcontentloaded' });
-  await page.waitForURL(/\/brands\/\d+/, { timeout: ACTION_TIMEOUT_MS });
+  await waitForBrandUrl(page);
   log('NAV', `On brand page: ${page.url()}`);
   return page;
 }

@@ -1,0 +1,344 @@
+<title>Kelle Skin — Creative Testing Map</title>
+<style>
+  :root{
+    --ground:#F3F6F2; --panel:#FFFFFF; --panel-2:#EDF1EC;
+    --ink:#19211D; --muted:#586460; --faint:#8A948F;
+    --line:#DDE4DE; --line-strong:#C7D1CA;
+    --accent:#2E6B54; --accent-soft:#dfeee7; --accent-ink:#1f4d3c;
+    --amber:#B37A21; --amber-soft:#f4e9d3;
+    --shadow:0 1px 2px rgba(25,33,29,.04),0 8px 24px rgba(25,33,29,.05);
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --serif:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --ground:#12160F; --panel:#1A2019; --panel-2:#212820;
+      --ink:#E9EEE7; --muted:#9DA89F; --faint:#6E786F;
+      --line:#2A322A; --line-strong:#39423A;
+      --accent:#68B394; --accent-soft:#1e2f28; --accent-ink:#9bd4bb;
+      --amber:#D9A441; --amber-soft:#2c2413;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#12160F; --panel:#1A2019; --panel-2:#212820;
+    --ink:#E9EEE7; --muted:#9DA89F; --faint:#6E786F;
+    --line:#2A322A; --line-strong:#39423A;
+    --accent:#68B394; --accent-soft:#1e2f28; --accent-ink:#9bd4bb;
+    --amber:#D9A441; --amber-soft:#2c2413;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.35);
+  }
+  :root[data-theme="light"]{
+    --ground:#F3F6F2; --panel:#FFFFFF; --panel-2:#EDF1EC;
+    --ink:#19211D; --muted:#586460; --faint:#8A948F;
+    --line:#DDE4DE; --line-strong:#C7D1CA;
+    --accent:#2E6B54; --accent-soft:#dfeee7; --accent-ink:#1f4d3c;
+    --amber:#B37A21; --amber-soft:#f4e9d3;
+    --shadow:0 1px 2px rgba(25,33,29,.04),0 8px 24px rgba(25,33,29,.05);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--ground);color:var(--ink);font-family:var(--sans);
+    line-height:1.55;-webkit-font-smoothing:antialiased;font-size:16px}
+  .wrap{max-width:1000px;margin:0 auto;padding:clamp(20px,4vw,52px) clamp(16px,4vw,40px) 80px}
+  a{color:var(--accent);text-underline-offset:2px}
+
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--accent);margin:0 0 14px}
+  h1{font-family:var(--sans);font-weight:800;letter-spacing:-.02em;line-height:1.03;
+    font-size:clamp(30px,6vw,52px);margin:0 0 14px;text-wrap:balance}
+  .lede{font-family:var(--serif);font-size:clamp(17px,2.3vw,21px);color:var(--muted);
+    max-width:62ch;margin:0 0 30px;line-height:1.5}
+  .lede b{color:var(--ink);font-weight:600}
+
+  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:1px;
+    background:var(--line);border:1px solid var(--line);border-radius:14px;overflow:hidden;margin-bottom:8px}
+  .stat{background:var(--panel);padding:16px 18px}
+  .stat .n{font-family:var(--sans);font-weight:800;font-size:clamp(22px,3.4vw,30px);
+    letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+  .stat .l{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--faint);margin-top:3px}
+  .note{font-size:12.5px;color:var(--faint);margin:10px 2px 0}
+
+  section{margin-top:52px}
+  .sec-head{display:flex;align-items:baseline;gap:12px;border-bottom:2px solid var(--ink);
+    padding-bottom:10px;margin-bottom:22px}
+  .sec-num{font-family:var(--mono);font-size:13px;color:var(--accent);font-weight:600}
+  h2{font-size:clamp(20px,3vw,26px);font-weight:750;letter-spacing:-.015em;margin:0;text-wrap:balance}
+  .thesis{font-family:var(--serif);font-size:17px;color:var(--muted);margin:0 0 22px;max-width:66ch;line-height:1.5}
+
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:14px;
+    padding:20px 22px;box-shadow:var(--shadow)}
+  .grid{display:grid;gap:14px}
+  .g2{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+  .g3{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
+
+  h3{font-size:15.5px;font-weight:700;margin:0 0 8px;letter-spacing:-.01em}
+  .card p{margin:0;color:var(--muted);font-size:14.5px}
+  .card p+p{margin-top:8px}
+  ul.clean{margin:10px 0 0;padding:0;list-style:none;display:grid;gap:7px}
+  ul.clean li{position:relative;padding-left:18px;color:var(--muted);font-size:14px}
+  ul.clean li::before{content:"";position:absolute;left:2px;top:9px;width:6px;height:6px;
+    border-radius:50%;background:var(--accent)}
+  ul.clean li b{color:var(--ink);font-weight:650}
+
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-top:4px}
+  .chip{font-family:var(--mono);font-size:12px;padding:4px 10px;border-radius:20px;
+    background:var(--panel-2);border:1px solid var(--line);color:var(--ink)}
+  .chip .c{color:var(--faint)}
+  .chip.hot{background:var(--amber-soft);border-color:transparent;color:var(--amber)}
+
+  /* coverage bars */
+  .bars{display:grid;gap:11px}
+  .bar{display:grid;grid-template-columns:1fr auto;align-items:center;gap:12px}
+  .bar .lab{font-size:13.5px;color:var(--ink)}
+  .bar .lab .k{font-family:var(--mono);color:var(--faint);font-size:11.5px}
+  .bar .track{grid-column:1/-1;height:8px;background:var(--panel-2);border-radius:6px;overflow:hidden}
+  .bar .fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--accent-ink));border-radius:6px}
+  .bar .val{font-family:var(--mono);font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+
+  /* ladder */
+  .ladder{display:grid;gap:0}
+  .rung{display:grid;grid-template-columns:auto 1fr;gap:16px;padding:14px 0;border-top:1px solid var(--line)}
+  .rung:first-child{border-top:0}
+  .rung .lv{font-family:var(--mono);font-size:12px;color:var(--accent);font-weight:600;padding-top:2px;white-space:nowrap}
+  .rung h4{margin:0 0 3px;font-size:14.5px;font-weight:700}
+  .rung p{margin:0;color:var(--muted);font-size:13.5px}
+
+  /* avatar table */
+  .tbl-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:14px}
+  table{border-collapse:collapse;width:100%;min-width:520px;font-size:13.5px}
+  th,td{text-align:left;padding:11px 16px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;
+    color:var(--faint);background:var(--panel-2);font-weight:600}
+  tbody tr:last-child td{border-bottom:0}
+  td .who{font-weight:650;color:var(--ink)}
+  td.ids{font-family:var(--mono);font-size:12px;color:var(--muted);white-space:nowrap}
+
+  .flag{display:inline-block;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--amber);border:1px solid var(--amber);border-radius:5px;
+    padding:1px 6px;margin-left:8px;vertical-align:middle}
+
+  .callout{background:var(--accent-soft);border:1px solid transparent;border-left:3px solid var(--accent);
+    border-radius:10px;padding:16px 20px}
+  .callout.amber{background:var(--amber-soft);border-left-color:var(--amber)}
+  .callout h3{color:var(--ink)}
+  .callout p{color:var(--muted)}
+
+  footer{margin-top:60px;padding-top:20px;border-top:1px solid var(--line);
+    font-family:var(--mono);font-size:12px;color:var(--faint);display:flex;flex-wrap:wrap;gap:6px 18px;justify-content:space-between}
+
+  @media (prefers-reduced-motion:no-preference){
+    .reveal{opacity:0;transform:translateY(10px);animation:rise .6s ease forwards}
+    @keyframes rise{to{opacity:1;transform:none}}
+  }
+</style>
+
+<div class="wrap">
+  <p class="eyebrow reveal">Kelle Skin · Ad Intelligence</p>
+  <h1 class="reveal">The Creative Testing Map</h1>
+  <p class="lede reveal">Every meaningful pattern across <b>121 tested ad scripts</b> — dissected into hooks, angles, mechanisms, CTAs, avatars, problems and desires. This is what Kelle has actually put in market, and what the whitespace looks like from here.</p>
+
+  <div class="stats reveal">
+    <div class="stat"><div class="n">121</div><div class="l">Scripts mapped</div></div>
+    <div class="stat"><div class="n">602</div><div class="l">Elements logged</div></div>
+    <div class="stat"><div class="n">254</div><div class="l">Distinct hooks</div></div>
+    <div class="stat"><div class="n">15</div><div class="l">Sub-avatars</div></div>
+    <div class="stat"><div class="n">58</div><div class="l">Mechanism spans</div></div>
+  </div>
+  <p class="note">Source: the verified blueprint (<span style="font-family:var(--mono)">output/kelle_blueprint.csv</span>). “Coverage” = how many of the 121 scripts contain a given block, computed by exact-text match.</p>
+
+  <!-- 1 -->
+  <section>
+    <div class="sec-head"><span class="sec-num">01</span><h2>The testing architecture</h2></div>
+    <p class="thesis">Kelle doesn't write 121 ads. It writes a handful of winners, then iterates them — re-cutting the same script across geos, formats and avatars while swapping only the opening.</p>
+    <div class="grid g2">
+      <div class="card">
+        <h3>Two lineages</h3>
+        <p>The <b>Cyperus Rotundus #</b> series is the original testing ground — Australian, small-business framing, the serum once branded <b>“Viareline.”</b> Those winners were later re-shot as the <b>Batch #</b> series for the US under <b>Kelle Skin.</b> Same bones, new market.</p>
+      </div>
+      <div class="card">
+        <h3>A reusable “spine”</h3>
+        <p>One proven back-half gets bolted onto new hooks again and again: the <b>friend-reveal</b> → <b>week-by-week pacing</b> → <b>“87,000 women”</b> → <b>60-day guarantee</b>. New ads mostly swap “Body Part 1” — the situation that opens the story.</p>
+      </div>
+    </div>
+    <div class="card" style="margin-top:14px">
+      <h3>Winner families (one idea, many cuts)</h3>
+      <div class="chips" style="margin-top:10px">
+        <span class="chip">Daily Plucker <span class="c">×14+ cuts</span></span>
+        <span class="chip">AI Doctor objection <span class="c">CR#3 → B#3.2/3.3/25/26</span></span>
+        <span class="chip">Aesthetician podcast <span class="c">CR#2.x → B#2.7/2.8/19</span></span>
+        <span class="chip">Makeup-won’t-sit-right <span class="c">B#32 · Makeupangle</span></span>
+        <span class="chip">Scam-sale BOF <span class="c">CR#1/13 · B#14/21</span></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- 2 -->
+  <section>
+    <div class="sec-head"><span class="sec-num">02</span><h2>The universal spine</h2></div>
+    <p class="thesis">A small set of blocks appears in a huge share of the library — the load-bearing copy Kelle keeps returning to.</p>
+    <div class="card">
+      <div class="bars">
+        <div class="bar"><div class="lab">“Targets the follicle &amp; weakens it progressively” <span class="k">core mechanism</span></div><div class="val">25 ads</div><div class="track"><div class="fill" style="width:100%"></div></div></div>
+        <div class="bar"><div class="lab">“Over 87,000 women have used this” <span class="k">social proof</span></div><div class="val">18</div><div class="track"><div class="fill" style="width:72%"></div></div></div>
+        <div class="bar"><div class="lab">Daily-Plucker mechanism block <span class="k">“weaken the thing that grows it”</span></div><div class="val">16</div><div class="track"><div class="fill" style="width:64%"></div></div></div>
+        <div class="bar"><div class="lab">“That’s why they have a 60-day guarantee” <span class="k">close</span></div><div class="val">15</div><div class="track"><div class="fill" style="width:60%"></div></div></div>
+        <div class="bar"><div class="lab">Week-by-week future pacing <span class="k">wk 2 / wk 4 / wk 8</span></div><div class="val">12</div><div class="track"><div class="fill" style="width:48%"></div></div></div>
+        <div class="bar"><div class="lab">“Then my friend showed up… WHAT DID YOU DO” <span class="k">reveal</span></div><div class="val">11</div><div class="track"><div class="fill" style="width:44%"></div></div></div>
+        <div class="bar"><div class="lab">“So, I’ve been an aesthetician for 17 years” <span class="k">opener</span></div><div class="val">10</div><div class="track"><div class="fill" style="width:40%"></div></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section>
+    <div class="sec-head"><span class="sec-num">03</span><h2>The mechanism escalated</h2></div>
+    <p class="thesis">The “why it works” story climbed a science ladder over time — from a vague botanical claim to a specific named enzyme. Newer ads sell the mechanism harder.</p>
+    <div class="card ladder">
+      <div class="rung"><div class="lv">Level 1</div><div><h4>Botanical claim</h4><p>“Ancient Egyptian herb targets the follicle and weakens it progressively → slower, thinner, lighter.” The base layer, in ~25 ads.</p></div></div>
+      <div class="rung"><div class="lv">Level 2</div><div><h4>The hormone: DHT</h4><p>Estrogen drops in menopause → DHT signals androgen-sensitive follicles (chin, lip, jaw) to grow. “You’re treating a hormonal problem with a mechanical tool.”</p></div></div>
+      <div class="rung"><div class="lv">Level 3</div><div><h4>The enzyme: 5-alpha reductase</h4><p>Names the exact enzyme that converts testosterone → DHT, and positions CR as inhibiting it. Powers the hormone-phobia angle (“it’s just one enzyme, not your hormones”).</p></div></div>
+      <div class="rung"><div class="lv">Level 4</div><div><h4>Deep science &amp; delivery</h4><p><b>gamma-curcumene</b> compound · <b>follicle stem cells</b> · <b>follicle miniaturization → dormancy</b> · <b>water-based = 2× more absorbable</b> than Amazon oils.</p></div></div>
+    </div>
+    <p class="note">Proof stack layered on top: 1,400-woman clinical study · NLM / peer-reviewed “as effective as laser” · selective (won’t touch brows, lashes, or scalp).</p>
+  </section>
+
+  <!-- 4 -->
+  <section>
+    <div class="sec-head"><span class="sec-num">04</span><h2>Sub-avatar testing<span class="flag">most active lever</span></h2></div>
+    <p class="thesis">The single core avatar — menopausal women 40+ — is being split into ever-narrower personas, each with its own identity-specific opening onto the same proven body. This is where the newest testing energy is going.</p>
+    <div class="tbl-wrap">
+      <table>
+        <thead><tr><th>Sub-avatar</th><th>The specific wedge</th><th>Scripts</th></tr></thead>
+        <tbody>
+          <tr><td><span class="who">Finance executive</span></td><td>Confidence at work; “own the room” with half your mind on your chin</td><td class="ids">B#86</td></tr>
+          <tr><td><span class="who">Sandwiched caregiver mom</span></td><td>47, raising a teen + caring for a parent; ignored herself</td><td class="ids">B#93</td></tr>
+          <tr><td><span class="who">Wellness / biohacker</span></td><td>Optimized sleep, hormones, gut — “except this one thing”</td><td class="ids">B#94</td></tr>
+          <tr><td><span class="who">Generational</span></td><td>“I watched my mother pluck for 22 years… now it’s me”</td><td class="ids">B#95</td></tr>
+          <tr><td><span class="who">Post-divorce dater</span></td><td>Turning her cheek on a third date over stubble</td><td class="ids">B#85</td></tr>
+          <tr><td><span class="who">Indian-American</span></td><td>Threading culture; family-function anxiety</td><td class="ids">B#96</td></tr>
+          <tr><td><span class="who">Black women</span></td><td>Melanin-rich skin → laser burn / hyperpigmentation risk</td><td class="ids">B#79, B#81</td></tr>
+          <tr><td><span class="who">White / grey-hair</span></td><td>“Too light for laser” — the segment laser abandons</td><td class="ids">B#3.2, B#27.1, B#66</td></tr>
+          <tr><td><span class="who">Gift-buyer (proxy)</span></td><td>Daughter buying for mom; “a gift she’ll thank you for”</td><td class="ids">B#92</td></tr>
+          <tr><td><span class="who">Body-hair (all-hair)</span><span class="flag">new line</span></td><td>Legs/underarms/bikini, women ~30, IPL objection</td><td class="ids">B#82.1, B#106–112</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section>
+    <div class="sec-head"><span class="sec-num">05</span><h2>The emotional stakes deepened</h2></div>
+    <p class="thesis">Problem framing escalated from a time-cost nuisance to something closer to grief. The same product, sold against progressively heavier stakes.</p>
+    <div class="grid g2">
+      <div class="card"><h3>Practical</h3><p>20 minutes each morning; tweezers stashed in the bathroom, car, desk drawer, purse.</p></div>
+      <div class="card"><h3>Social</h3><p>Avoiding certain lighting; obsessing over Zoom camera angles; reaching to delete the family photo.</p></div>
+      <div class="card"><h3>Relational</h3><p>Flinching when a partner touches your face; turning your cheek on a first date after divorce.</p></div>
+      <div class="card"><h3>Existential</h3><p>“That old woman at the wedding — that could be me.” Becoming your mother. A mother who plucked <b>until the day she died.</b></p></div>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section>
+    <div class="sec-head"><span class="sec-num">06</span><h2>Dedicated objection-handlers</h2></div>
+    <p class="thesis">A whole class of ads exists only to dismantle a specific reason not to buy — a sign of a maturing account working down the funnel.</p>
+    <ul class="clean">
+      <li><b>“Laser is better.”</b> → Laser targets pigment; useless on grey/white/light hair — half the face after 50.</li>
+      <li><b>“Cheaper on Amazon.”</b> → 90% of CR serums are oil-based and barely absorb; only water-based reaches the follicle.</li>
+      <li><b>“Will it thin my brows/lashes?”</b> → It’s selective — only androgen-sensitive follicles; brows/lashes/scalp are safe.</li>
+      <li><b>“Too expensive.”</b> → Do the math vs. $1,000/yr waxing and $2–3k laser that still grows back.</li>
+      <li><b>“I don’t want to touch my hormones.”</b> → It’s one enzyme, works locally, never enters the bloodstream.</li>
+      <li><b>“I’m skeptical / heard it before.”</b> → Skeptic-turned-believer; the 60-day guarantee as the safety net.</li>
+      <li><b>“Dermaplaning works for me.”</b> → It’s just fancy shaving — surface only, resets the clock.</li>
+    </ul>
+  </section>
+
+  <!-- 7 -->
+  <section>
+    <div class="sec-head"><span class="sec-num">07</span><h2>Format range</h2></div>
+    <p class="thesis">Nearly every creative format has been tried against the same core message.</p>
+    <div class="chips">
+      <span class="chip">Talking-head podcast</span>
+      <span class="chip">First-person UGC</span>
+      <span class="chip">AI UGC</span>
+      <span class="chip">Animation — personified hair / chin / tools</span>
+      <span class="chip">Claymation</span>
+      <span class="chip">Pixar-style musical</span>
+      <span class="chip">Method scorecard (rate 1–10)</span>
+      <span class="chip">Static / text-overlay</span>
+      <span class="chip">Before / after</span>
+      <span class="chip">Meme (“Directed by…”)</span>
+      <span class="chip">Long-form VSL</span>
+      <span class="chip">B-roll reminder</span>
+      <span class="chip">Whistleblower exposé</span>
+    </div>
+  </section>
+
+  <!-- 8 -->
+  <section>
+    <div class="sec-head"><span class="sec-num">08</span><h2>Offer &amp; CTA architecture</h2></div>
+    <p class="thesis">The close is remarkably consistent — a guarantee-led risk reversal — with promo and AOV mechanics layered on top.</p>
+    <div class="grid g2">
+      <div class="card">
+        <h3>Risk reversal (near-universal)</h3>
+        <ul class="clean">
+          <li><b>60-day money-back guarantee</b> — the default close (90-day tested once, CR#12.2).</li>
+          <li>Framed as <b>“either you forget about your facial hair, or you get your money back.”</b></li>
+          <li><b>“Not a buying decision — a trying decision.”</b></li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>Urgency &amp; AOV</h3>
+        <ul class="clean">
+          <li>Scarcity: “sells out constantly,” small-batch, “since going viral.”</li>
+          <li>BOF sales: <b>Women’s Day (WOMAN10)</b>, <b>Spring (SPRING10)</b>, 24-hr flash.</li>
+          <li>AOV: <b>Buy 2 Get 1 Free</b>, bundles, “start with 2–3 bottles.”</li>
+          <li>Proof shift: <b>“87,000 women”</b> (older) → <b>“16,000+ 5-star reviews”</b> (newer).</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 9 -->
+  <section>
+    <div class="sec-head"><span class="sec-num">09</span><h2>Brand &amp; product-line evolution</h2></div>
+    <p class="thesis">The map also traces how the business itself moved — geo, naming, and an expanding product ladder.</p>
+    <div class="grid g3">
+      <div class="card"><h3>Geo</h3><p>Australian small-business framing (“Viareline”) → US market as <b>Kelle Skin.</b></p></div>
+      <div class="card"><h3>Ingredient naming</h3><p>Tested as <b>Cyperus Rotundus</b> and by its common name <b>“Nut Grass.”</b> A brand variant <b>“Cyperglow”</b> also appears.</p></div>
+      <div class="card"><h3>Product ladder</h3><p>Facial hair → <b>body-hair (AH) line</b> → post-purchase <b>Dark Spot Brightening</b> upsell (“Complete Transformation System”).</p></div>
+    </div>
+  </section>
+
+  <!-- 10 -->
+  <section>
+    <div class="sec-head"><span class="sec-num">10</span><h2>Where the whitespace is</h2></div>
+    <p class="thesis">Read against everything tested, these are the gaps — directions the library barely touches yet.</p>
+    <div class="grid g2">
+      <div class="callout amber">
+        <h3>Under-tested angles</h3>
+        <ul class="clean">
+          <li><b>Pure identity / aspirational</b> ads — almost everything is problem → mechanism → proof → offer.</li>
+          <li><b>Real customer footage</b> — testimonials are scripted first-person, not actual reviews-as-creative.</li>
+          <li><b>Speed-to-first-result</b> as the hook (“softer in 2 weeks”) rather than the reveal.</li>
+          <li><b>Partner / spouse POV</b> — the man’s side of the relationship angle.</li>
+        </ul>
+      </div>
+      <div class="callout">
+        <h3>Open headroom</h3>
+        <ul class="clean">
+          <li>The <b>body-hair line just launched</b> — wide avatar &amp; format room before it saturates.</li>
+          <li><b>Founder / brand story</b> is underused vs. the performance personas.</li>
+          <li>No <b>named-competitor comparison</b> or ingredient deep-dive series beyond animation.</li>
+          <li><b>Brightening upsell</b> could seed its own front-end (dark-spots-first) angle.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>Kelle Skin · Creative Testing Map</span>
+    <span>121 scripts · 602 verified elements · brand_id 23</span>
+  </footer>
+</div>

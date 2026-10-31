@@ -1,0 +1,280 @@
+<title>Drink Nectar — 8-Layer Messaging Teardown</title>
+<style>
+  :root{
+    --ground:#F5F3EC; --panel:#FFFFFF; --panel-2:#ECEFE4;
+    --ink:#1E2A22; --muted:#5C6A5E; --faint:#8D9788;
+    --line:#E2E6D6; --line-strong:#CDD5BE;
+    --sage:#4B7B5A; --sage-soft:#DCEBDD; --sage-ink:#345B40;
+    --coral:#D85B54; --coral-soft:#F7DFD8; --coral-ink:#A83C36;
+    --honey:#B7862B; --honey-soft:#F3E7C8;
+    --sky:#3E6C82; --sky-soft:#DCE9EE;
+    --shadow:0 1px 2px rgba(30,42,34,.05),0 12px 30px rgba(30,42,34,.06);
+    --serif:"Iowan Old Style","Palatino Linotype",Georgia,serif;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    --mono:ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --ground:#14180F; --panel:#1C2117; --panel-2:#252B1E;
+      --ink:#ECF0E2; --muted:#AAB59F; --faint:#76806B;
+      --line:#2C3324; --line-strong:#3E472F;
+      --sage:#7FB58C; --sage-soft:#20301F; --sage-ink:#A6D3AE;
+      --coral:#E8817A; --coral-soft:#331E1B; --coral-ink:#F1A79F;
+      --honey:#D6AA53; --honey-soft:#2E2611;
+      --sky:#7FAAC0; --sky-soft:#1B272D;
+      --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 34px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#14180F; --panel:#1C2117; --panel-2:#252B1E;
+    --ink:#ECF0E2; --muted:#AAB59F; --faint:#76806B;
+    --line:#2C3324; --line-strong:#3E472F;
+    --sage:#7FB58C; --sage-soft:#20301F; --sage-ink:#A6D3AE;
+    --coral:#E8817A; --coral-soft:#331E1B; --coral-ink:#F1A79F;
+    --honey:#D6AA53; --honey-soft:#2E2611;
+    --sky:#7FAAC0; --sky-soft:#1B272D;
+    --shadow:0 1px 2px rgba(0,0,0,.4),0 14px 34px rgba(0,0,0,.4);
+  }
+  :root[data-theme="light"]{
+    --ground:#F5F3EC; --panel:#FFFFFF; --panel-2:#ECEFE4;
+    --ink:#1E2A22; --muted:#5C6A5E; --faint:#8D9788;
+    --line:#E2E6D6; --line-strong:#CDD5BE;
+    --sage:#4B7B5A; --sage-soft:#DCEBDD; --sage-ink:#345B40;
+    --coral:#D85B54; --coral-soft:#F7DFD8; --coral-ink:#A83C36;
+    --honey:#B7862B; --honey-soft:#F3E7C8;
+    --sky:#3E6C82; --sky-soft:#DCE9EE;
+    --shadow:0 1px 2px rgba(30,42,34,.05),0 12px 30px rgba(30,42,34,.06);
+  }
+  *{box-sizing:border-box}
+  body{margin:0}
+  .wrap{background:var(--ground);color:var(--ink);font-family:var(--sans);line-height:1.6;
+    -webkit-font-smoothing:antialiased;padding:0 20px 80px}
+  .col{max-width:920px;margin:0 auto}
+  header{padding:64px 0 30px;border-bottom:1px solid var(--line-strong)}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;
+    color:var(--sage);font-weight:600;margin:0 0 18px}
+  h1{font-family:var(--serif);font-weight:700;letter-spacing:-.01em;line-height:1.05;
+    font-size:clamp(36px,6.4vw,64px);margin:0;text-wrap:balance}
+  h1 em{font-style:italic;color:var(--coral)}
+  .dek{font-family:var(--serif);font-size:clamp(17px,2.4vw,21px);color:var(--muted);
+    max-width:64ch;margin:22px 0 0;line-height:1.5}
+  .meta{display:flex;flex-wrap:wrap;gap:8px 22px;margin-top:26px;font-family:var(--mono);
+    font-size:12px;color:var(--faint);letter-spacing:.04em}
+  .meta b{color:var(--muted);font-weight:600}
+  .split{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+  .chip{font-family:var(--mono);font-size:11.5px;padding:4px 11px;border-radius:20px;font-weight:600;letter-spacing:.03em}
+  .chip.c{background:var(--coral-soft);color:var(--coral-ink)}
+  .chip.h{background:var(--sky-soft);color:var(--sky)}
+  .tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin:34px 0 10px}
+  @media(max-width:640px){.tiles{grid-template-columns:repeat(2,1fr)}}
+  .tile{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px 16px;box-shadow:var(--shadow)}
+  .tile .n{font-family:var(--serif);font-size:32px;font-weight:700;letter-spacing:-.02em;
+    font-variant-numeric:tabular-nums;line-height:1.05;color:var(--sage)}
+  .tile .l{font-size:12.5px;color:var(--muted);margin-top:8px;line-height:1.35}
+  section{padding:44px 0 6px}
+  .kicker{font-family:var(--mono);font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;
+    color:var(--honey);font-weight:600;margin:0 0 10px}
+  h2{font-family:var(--serif);font-size:clamp(24px,3.6vw,32px);font-weight:700;letter-spacing:-.01em;margin:0 0 6px;text-wrap:balance}
+  h2 em{font-style:italic;color:var(--coral)}
+  .lede{font-family:var(--serif);color:var(--muted);font-size:17px;max-width:66ch;margin:6px 0 24px}
+  p{max-width:70ch}
+  .thesis{background:var(--panel);border:1px solid var(--line-strong);border-left:4px solid var(--sage);
+    border-radius:14px;padding:24px 26px;box-shadow:var(--shadow);font-family:var(--serif);
+    font-size:18.5px;line-height:1.55;color:var(--ink)}
+  .thesis b{font-family:var(--sans);font-weight:700;background:var(--sage-soft);color:var(--sage-ink);
+    padding:1px 6px;border-radius:5px}
+  .layers{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:640px){.layers{grid-template-columns:1fr}}
+  .layer{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px 18px;
+    box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px}
+  .layer .top{display:flex;align-items:baseline;justify-content:space-between;gap:10px}
+  .layer .name{font-weight:700;font-size:15.5px}
+  .layer .cnt{font-family:var(--mono);font-size:12px;color:var(--sage);font-weight:600;
+    background:var(--sage-soft);padding:2px 8px;border-radius:20px;white-space:nowrap}
+  .layer .ex{font-family:var(--serif);font-size:14px;color:var(--muted);line-height:1.45;font-style:italic}
+  .layer .ex::before{content:"“"}.layer .ex::after{content:"”"}
+  .rank{display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+  .row{display:grid;grid-template-columns:56px 1fr;gap:14px;padding:13px 18px;align-items:center;border-top:1px solid var(--line)}
+  .row:first-child{border-top:none}
+  .row .bar{font-family:var(--mono);font-variant-numeric:tabular-nums;font-weight:700;font-size:13px;color:var(--coral);text-align:right}
+  .row .bar small{color:var(--faint);font-weight:400;font-size:10.5px;display:block;letter-spacing:.05em}
+  .row .txt{font-size:14.5px}
+  .row .txt em{font-family:var(--serif);font-style:italic;color:var(--muted)}
+  .tbl{width:100%;border-collapse:collapse;font-size:14.5px;background:var(--panel);
+    border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+  .tblwrap{overflow-x:auto}
+  .tbl th{text-align:left;font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--faint);font-weight:600;padding:14px 16px;border-bottom:1px solid var(--line-strong)}
+  .tbl td{padding:12px 16px;border-top:1px solid var(--line);vertical-align:top}
+  .tbl td.n{font-family:var(--mono);font-variant-numeric:tabular-nums;color:var(--coral);font-weight:700;white-space:nowrap}
+  .tbl td.tag{white-space:nowrap;font-family:var(--mono);font-size:11px;font-weight:600}
+  .tbl tr td:first-child{font-weight:700}
+  .ladder{display:flex;flex-direction:column;gap:10px;counter-reset:step}
+  .step{display:grid;grid-template-columns:34px 1fr;gap:16px;background:var(--panel);border:1px solid var(--line);
+    border-radius:14px;padding:16px 18px;box-shadow:var(--shadow)}
+  .step .num{counter-increment:step;font-family:var(--mono);font-weight:700;color:var(--honey);font-size:15px;padding-top:1px}
+  .step .num::before{content:counter(step,decimal-leading-zero)}
+  .step h3{margin:0 0 4px;font-size:15.5px;font-weight:700}
+  .step p{margin:0;font-size:14px;color:var(--muted);max-width:none}
+  .step .verb{font-family:var(--serif);font-style:italic;color:var(--sage-ink)}
+  .gaps{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:640px){.gaps{grid-template-columns:1fr}}
+  .gap{background:var(--sky-soft);border:1px solid var(--line);border-radius:14px;padding:16px 18px}
+  .gap h3{margin:0 0 5px;font-size:14.5px;font-weight:700;color:var(--sky)}
+  .gap p{margin:0;font-size:13.5px;color:var(--muted);max-width:none}
+  footer{margin-top:56px;padding-top:24px;border-top:1px solid var(--line);
+    font-family:var(--mono);font-size:11.5px;color:var(--faint);letter-spacing:.03em;line-height:1.7}
+</style>
+
+<div class="wrap">
+<div class="col">
+
+  <header>
+    <p class="eyebrow">GetHook Ad Intelligence · Competitive Field Report</p>
+    <h1>Drink Nectar. The <em>cortisol</em> is the villain</h1>
+    <p class="dek">Every messaging building block in Drink Nectar's live ad library — two products, one nervous-system story — deduplicated and split across eight layers.</p>
+    <div class="split">
+      <span class="chip c">Nectar Calm · cortisol drink · ~75 ads</span>
+      <span class="chip h">Nectar Hydration · low-sodium electrolytes · ~15 ads</span>
+    </div>
+    <div class="meta">
+      <span><b>96</b> video ads scraped</span>
+      <span><b>217</b> messaging elements</span>
+      <span><b>8</b> layers</span>
+      <span><b>0</b> fidelity failures</span>
+      <span>Method: <b>8-layer blueprint v1</b></span>
+    </div>
+  </header>
+
+  <div class="tiles">
+    <div class="tile"><div class="n">1 hormone</div><div class="l"><b>cortisol</b> — named as the single root cause behind weight, sleep, bloat, mood, even libido</div></div>
+    <div class="tile"><div class="n">$140<span style="font-size:16px">/mo</span></div><div class="l">the recurring price anchor — “buy all four separately” vs one drink (15 ads)</div></div>
+    <div class="tile"><div class="n">4</div><div class="l">fixed ingredients: <b>KSM-66 ashwagandha, magnesium glycinate, L-theanine, vitamin D</b></div></div>
+    <div class="tile"><div class="n">jawline</div><div class="l">the visual proof word — “I actually saw my jawline again” is the recurring payoff</div></div>
+  </div>
+
+  <section>
+    <p class="kicker">The strategic thesis</p>
+    <div class="thesis">
+      Drink Nectar sells one idea in two bottles: your body is <b>stuck in survival mode</b>, and a hidden hormone is to blame. For <b>Nectar Calm</b> the villain is <em>cortisol</em> — it hoards fat and water, drives the “food noise,” and wakes you at 3 a.m.; four clinically-dosed ingredients bring it down and the puffiness/jawline/weight follow. For <b>Nectar Hydration</b> the villain is <em>sodium</em> — mainstream electrolytes are “sodium bombs” that dehydrate your cells; a low-sodium ratio fixes the sodium-potassium pump. Both close on the same soft, trust-led offer: small American family business, sells out constantly, 90-day guarantee, “nothing to lose except the puff.”
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer inventory</p>
+    <h2>The eight layers, by volume</h2>
+    <p class="lede">Distinct, deduplicated elements per layer, with the highest-coverage exemplar.</p>
+    <div class="layers">
+      <div class="layer"><div class="top"><span class="name">1 · Hook</span><span class="cnt">62 distinct</span></div><div class="ex">My cortisol was jacked. I had no idea.</div></div>
+      <div class="layer"><div class="top"><span class="name">2 · Angle</span><span class="cnt">96 ads → ~16 families</span></div><div class="ex">One reason per ad, across two product lines</div></div>
+      <div class="layer"><div class="top"><span class="name">3 · Unique mechanism</span><span class="cnt">12 distinct</span></div><div class="ex">Ashwagandha KSM-66, clinically proven to lower cortisol up to 30%</div></div>
+      <div class="layer"><div class="top"><span class="name">4 · CTA</span><span class="cnt">9 distinct</span></div><div class="ex">90 day money back guarantee so you have nothing to lose</div></div>
+      <div class="layer"><div class="top"><span class="name">5 · Avatar</span><span class="cnt">11 distinct</span></div><div class="ex">What no one tells women over 50 is this</div></div>
+      <div class="layer"><div class="top"><span class="name">6 · Problem</span><span class="cnt">10 distinct</span></div><div class="ex">Moon face, no jawline, hair falling out, racing thoughts, exhausted</div></div>
+      <div class="layer"><div class="top"><span class="name">7 · Desire</span><span class="cnt">9 distinct</span></div><div class="ex">I actually saw my jawline again</div></div>
+      <div class="layer"><div class="top"><span class="name">8 · Repeated spine</span><span class="cnt">16 distinct</span></div><div class="ex">tastes like strawberry lemonade</div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 2 · Angle taxonomy</p>
+    <h2>Sixteen lenses, two villains</h2>
+    <p class="lede">The 96 ads collapse into repeatable families. <span class="chip c" style="padding:1px 8px">C</span> = Nectar Calm, <span class="chip h" style="padding:1px 8px">H</span> = Nectar Hydration.</p>
+    <div class="tblwrap">
+    <table class="tbl">
+      <thead><tr><th>Angle family</th><th></th><th>What it does</th></tr></thead>
+      <tbody>
+        <tr><td>Day-by-day timeline</td><td class="tag" style="color:var(--coral-ink)">C</td><td>“Day 1 / 3 / 7 / 14 / 30 / 60” — narrates the transformation as a countdown (male &amp; female cuts).</td></tr>
+        <tr><td>Doctor / functional-medicine authority</td><td class="tag" style="color:var(--coral-ink)">C</td><td>A doctor names the 4 ingredients &amp; doses; “buy them separately = $140/month.”</td></tr>
+        <tr><td>Prove-it-wrong skeptic</td><td class="tag" style="color:var(--coral-ink)">C</td><td>“I bought it to prove that woman wrong” — cortisol tested before/after, the guarantee de-risks it.</td></tr>
+        <tr><td>Husband side-effects exposé</td><td class="tag" style="color:var(--coral-ink)">C</td><td>Wife “exposes” her husband's changes (jawline, snacking, even the “blue pills”).</td></tr>
+        <tr><td>Betrayal / advertorial</td><td class="tag" style="color:var(--coral-ink)">C</td><td>“Husband cheated” / “FBI target” clickbait cold-opens into a functional-doctor story.</td></tr>
+        <tr><td>Menopause &amp; perimenopause</td><td class="tag" style="color:var(--coral-ink)">C</td><td>Estrogen drops → cortisol spikes → hot flashes, weight, 3 a.m. wake-ups.</td></tr>
+        <tr><td>Food noise / nighttime eating</td><td class="tag" style="color:var(--coral-ink)">C</td><td>“You can't willpower your way out” — cortisol drives the 9 p.m. pantry raid.</td></tr>
+        <tr><td>Cortisol / ingredient personification</td><td class="tag" style="color:var(--coral-ink)">C</td><td>“Hi, I'm Cortisol,” “I'm magnesium glycinate” — the villain &amp; the fixes speak.</td></tr>
+        <tr><td>ADHD nervous-system</td><td class="tag" style="color:var(--coral-ink)">C</td><td>Doctor reframes ADHD symptoms as a nutrient/cortisol problem.</td></tr>
+        <tr><td>Alcohol → cortisol / sobriety</td><td class="tag" style="color:var(--coral-ink)">C</td><td>Nightly wine spikes cortisol; “sobriety alone isn't enough.”</td></tr>
+        <tr><td>Sodium-potassium pump science</td><td class="tag" style="color:var(--sky)">H</td><td>You're hydrating the wrong compartment — cells stay dry despite drinking all day.</td></tr>
+        <tr><td>Life-stage hydration</td><td class="tag" style="color:var(--sky)">H</td><td>Pregnancy, diabetes, seniors on BP meds, menopause — “not for athletes, for you.”</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 8 · The spine</p>
+    <h2>The lines that recur everywhere</h2>
+    <p class="lede">Highest-coverage repeated blocks. Number = ads containing that exact block.</p>
+    <div class="rank">
+      <div class="row"><div class="bar">18<small>ads</small></div><div class="txt"><em>“tastes like strawberry lemonade”</em> — the sensory ease-of-use proof</div></div>
+      <div class="row"><div class="bar">15<small>ads</small></div><div class="txt"><em>“small American family business”</em> — trust + scarcity anchor</div></div>
+      <div class="row"><div class="bar">15<small>ads</small></div><div class="txt"><em>“$140 a month”</em> — the buy-four-separately price objection</div></div>
+      <div class="row"><div class="bar">11<small>ads</small></div><div class="txt"><em>“Zero sugar, zero calories”</em></div></div>
+      <div class="row"><div class="bar">8<small>ads</small></div><div class="txt"><em>“the food noise”</em> — the branded symptom name</div></div>
+      <div class="row"><div class="bar">7<small>ads</small></div><div class="txt"><em>“they sell out constantly”</em> → join the wait list (scarcity engine)</div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 3 · Mechanism ladder</p>
+    <h2>Why one hormone explains everything</h2>
+    <p class="lede">Nectar Calm's whole argument is a causal chain: stress → cortisol → survival mode → the symptoms you've been blaming on yourself.</p>
+    <div class="ladder">
+      <div class="step"><div class="num"></div><div><h3>Survival mode</h3><p><span class="verb">The reframe.</span> Chronic stress keeps cortisol high, so the body “hoards fat and water” and floods you with hunger hormones — “it's not willpower, it's biochemistry.”</p></div></div>
+      <div class="step"><div class="num"></div><div><h3>KSM-66 ashwagandha</h3><p><span class="verb">The hero.</span> “Clinically proven to lower cortisol up to 30%” — the patented extract, “not cheap root powder.” Tells the body the danger is over.</p></div></div>
+      <div class="step"><div class="num"></div><div><h3>Magnesium glycinate</h3><p><span class="verb">The absorber.</span> “Not oxide or citrate” — the form that crosses into the brain, calms the nervous system, and flushes water retention (the puffy face).</p></div></div>
+      <div class="step"><div class="num"></div><div><h3>L-theanine + vitamin D</h3><p><span class="verb">The finishers.</span> L-theanine raises GABA and “quiets the food noise”; vitamin D is the deficiency that “breaks cortisol regulation” underneath it all.</p></div></div>
+      <div class="step"><div class="num"></div><div><h3>[Hydration] The sodium-potassium pump</h3><p><span class="verb">The parallel villain.</span> Mainstream drinks are “sodium bombs” (500mg) that pull water out of cells; Nectar's 100mg + potassium ratio pushes it in.</p></div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layer 4 · the offer</p>
+    <h2>Offer architecture</h2>
+    <p class="lede">A deliberately soft, low-pressure close — trust and scarcity over hard discounting.</p>
+    <div class="tblwrap">
+    <table class="tbl">
+      <thead><tr><th>Component</th><th>How it shows up</th></tr></thead>
+      <tbody>
+        <tr><td>Price framing</td><td>“About $1.25 a serving” vs “$140 a month” to buy the four ingredients separately (+ pill fatigue)</td></tr>
+        <tr><td>Guarantee</td><td>“90-day money-back guarantee, nothing to lose” — often the skeptic's whole reason to try</td></tr>
+        <tr><td>Trust</td><td>“Small American family business,” “organic,” “made in the USA,” “clinical doses”</td></tr>
+        <tr><td>Scarcity</td><td>“They sell out constantly — if you can still see the link, it's in stock; if not, join the wait list”</td></tr>
+      </tbody>
+    </table>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Layers 6 & 7 · pain → dream</p>
+    <h2>The emotional arc</h2>
+    <p class="lede">The pain is bodily self-alienation; the dream is recognizing yourself again.</p>
+    <div class="layers">
+      <div class="layer"><div class="top"><span class="name">Problem</span><span class="cnt">the stranger</span></div><div class="ex">Moon face, no jawline, hair falling out all the time, racing thoughts, exhausted</div></div>
+      <div class="layer"><div class="top"><span class="name">Problem</span><span class="cnt">effort betrayed</span></div><div class="ex">I felt like I was doing everything right and my body just wouldn't respond</div></div>
+      <div class="layer"><div class="top"><span class="name">Desire</span><span class="cnt">the payoff</span></div><div class="ex">I actually saw my jawline again for the first time in years</div></div>
+      <div class="layer"><div class="top"><span class="name">Desire</span><span class="cnt">rest</span></div><div class="ex">I sleep straight through</div></div>
+    </div>
+  </section>
+
+  <section>
+    <p class="kicker">Whitespace</p>
+    <h2>What they're <em>not</em> testing</h2>
+    <p class="lede">Gaps in the current library.</p>
+    <div class="gaps">
+      <div class="gap"><h3>Men as primary buyer (Calm)</h3><p>Men appear mostly via wife-POV. A male-first cortisol angle (stress, gut, T) is barely tested directly.</p></div>
+      <div class="gap"><h3>Younger avatar (20s–early 30s)</h3><p>Calm skews 35–55 / menopausal. The “burnout twenties” frame is open.</p></div>
+      <div class="gap"><h3>Cross-sell between the two products</h3><p>Calm and Hydration are marketed in total isolation — no “stack both” bundle angle.</p></div>
+      <div class="gap"><h3>Subscription / daily-ritual lock-in</h3><p>Everything is one-off scarcity; no auto-replenish or streak/ritual framing despite a daily-use product.</p></div>
+    </div>
+  </section>
+
+  <footer>
+    Drink Nectar · brand_id 56 · 96 ads · 217 deduplicated messaging elements across 8 layers · 0 fidelity failures.<br>
+    Generated by the deterministic 8-layer blueprint builder (docs/messaging-blueprint-methodology.md). Verbatim everywhere except Angle. Coverage auto-computed against source transcripts.<br>
+    GetHook Ad Intelligence — competitive teardown, not affiliated with Drink Nectar.
+  </footer>
+
+</div>
+</div>
