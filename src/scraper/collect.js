@@ -32,6 +32,7 @@ const { prepareTranscript, BackendTranscriptionFailedError } = require('./prepar
 const { extractTranscript } = require('./extract');
 const { captureShareUrl } = require('./share');
 const { upsertBrand, ensureMainPage, upsertAd, getExistingMediaIds } = require('../supabase/adsRepository');
+const { startRun, recordRun } = require('../supabase/ranksRepository');
 const { maxAds: MAX_ADS, filters: FILTER_CONFIG } = require('../config');
 
 const ACTION_TIMEOUT_MS = 15000;
@@ -194,7 +195,15 @@ async function collectAdsForBrand(context, page, brandName, maxAds = MAX_ADS) {
     warn('COLLECT', `Could not upsert brand "${brandName}" to Supabase; skipping DB writes for this run: ${err.message}`);
   }
 
+  // seenIds = ads encountered in THIS run, in list order (listOrder). knownIds =
+  // ads already stored: they're still ranked (their list position is recorded)
+  // but not re-processed. maxAds = how far down GetHook's list to look.
   const seenIds = new Set();
+  const knownIds = new Set();
+  const listOrder = [];
+  let reachedEnd = false;
+  let alreadyStored = 0;
+  let runId = null;
   const results = [];
   const skippedAds = [];
   let duplicatesIgnored = 0;
@@ -206,12 +215,17 @@ async function collectAdsForBrand(context, page, brandName, maxAds = MAX_ADS) {
   if (brandId !== null) {
     try {
       const existing = await getExistingMediaIds(brandId);
-      for (const id of existing) seenIds.add(id);
-      if (seenIds.size > 0) {
-        log('COLLECT', `Skipping ${seenIds.size} already-scraped ad(s) found in Supabase.`);
+      for (const id of existing) knownIds.add(id);
+      if (knownIds.size > 0) {
+        log('COLLECT', `${knownIds.size} ad(s) already in Supabase: they'll be ranked but not re-processed.`);
       }
     } catch (err) {
       warn('COLLECT', `Could not load existing media IDs from Supabase: ${err.message}`);
+    }
+    try {
+      runId = await startRun({ brandId, pageId: mainPageId, source: 'scraper', listUrl: brandUrl, depth: maxAds });
+    } catch (err) {
+      warn('COLLECT', `Could not start a rank-history run; ranks won't be recorded: ${err.message}`);
     }
   }
 
@@ -243,7 +257,14 @@ async function collectAdsForBrand(context, page, brandName, maxAds = MAX_ADS) {
       }
 
       seenIds.add(mediaId);
+      listOrder.push(mediaId);
       newThisRound += 1;
+
+      if (knownIds.has(mediaId)) {
+        alreadyStored += 1;
+        log('COLLECT', `Rank ${listOrder.length}: mediaId=${mediaId} already stored — ranked, not re-processed.`);
+        continue;
+      }
 
       const cardSummary = await extractCardSummary(card);
       log('COLLECT', `Processing ad ${seenIds.size}/${maxAds}: mediaId=${mediaId} title="${cardSummary.title}"`);
@@ -295,12 +316,27 @@ async function collectAdsForBrand(context, page, brandName, maxAds = MAX_ADS) {
     log('COLLECT', `Round ${round} done: newThisRound=${newThisRound}, grew=${grew}`);
     if (!grew && newThisRound === 0) {
       log('COLLECT', 'No new ads after scrolling — reached the end of the list.');
+      reachedEnd = true;
       break;
+    }
+  }
+
+  let rankResult = null;
+  if (runId !== null) {
+    try {
+      rankResult = await recordRun(runId, { brandId, pageId: mainPageId, orderedMediaIds: listOrder, reachedEnd });
+      log('COLLECT', `Rank history: ${rankResult.ranked} ad(s) ranked from ${rankResult.listed} listed` +
+        (reachedEnd ? `, ${rankResult.dropped} marked dropped (no longer in the list).` : ' (partial list — nothing marked dropped).'));
+    } catch (err) {
+      warn('COLLECT', `Could not record rank history: ${err.message}`);
     }
   }
 
   const summary = {
     totalDiscovered: seenIds.size,
+    totalAlreadyStored: alreadyStored,
+    reachedEnd,
+    rankHistory: rankResult,
     totalProcessed: results.length,
     totalSkipped: skipped,
     totalDuplicatesIgnored: duplicatesIgnored,
@@ -314,7 +350,7 @@ async function collectAdsForBrand(context, page, brandName, maxAds = MAX_ADS) {
 
   log(
     'COLLECT',
-    `Summary: discovered=${summary.totalDiscovered}, processed=${summary.totalProcessed}, ` +
+    `Summary: discovered=${summary.totalDiscovered}, alreadyStored=${summary.totalAlreadyStored}, processed=${summary.totalProcessed}, ` +
       `skipped=${summary.totalSkipped}, duplicatesIgnored=${summary.totalDuplicatesIgnored}, ` +
       `errors=${summary.totalErrors}, backendFailures=${summary.totalBackendFailures}, ` +
       `dbSaved=${summary.totalDbSaved}, dbErrors=${summary.totalDbErrors}`

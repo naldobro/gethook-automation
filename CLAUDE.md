@@ -124,6 +124,24 @@ The two rules most often botched: **Angle is AD-specific, Unique mechanism is BR
 
 **Boundary (strict):** the scraper only COLLECTS reliably and fast and stores. All clustering/scoring/conviction/trend logic lives in the separate analysis body — never in the scraper.
 
+## Ad numbering & rank history (BUILT 2026-11-20)
+
+Migration `20261120132626_ad_codes_page_letters_rank_history.sql` (applied via the Management API migrations endpoint; the `.env` access token is scoped to Migrations read-write only, so `supabase db push` is refused — POST the SQL to `/v1/projects/{ref}/database/migrations` instead).
+- **Permanent ID** `ads.ad_code` = `<brands.code>-<4-digit seq>` (e.g. `HK-0042`), first-seen order, never changes. Use it to reference ads in blueprints/notes.
+- **Rank label** `#<rank><page letter>`: `#1` = most impressions on the main page, `#1a` = top ad on the brand's 1st 3rd-party page, `#1b` the 2nd, … Ranked WITHIN each page. `pages.letter`: `''` for main, `a, b, …` fixed in the order pages first got ads (null = no ads yet).
+- **History:** every scrape run of a page writes `scrape_runs` + one `ad_rank_snapshots` row per listed ad; latest copied to `ads.current_rank/current_label`. View `ad_rank_history` joins it all. Ads missing from a run that reached the end of the list get `ads.status='dropped'`. The first snapshot per page (`source='backfill'`) is the original scrape order.
+- Triggers assign `ad_code`, brand `code` and page `letter` automatically on insert — no scraper code needed for that. Ranks are recorded by `src/supabase/ranksRepository.js`, called from `collect.js` and `scrapePages.js`.
+- **Rescrape semantics:** ads already in the DB are ranked but NOT re-processed; only new ads get the full transcript/share pipeline. `maxAds` / `--max-ads` = how far down GetHook's list to look.
+- **Depth rule (user-set):** main brand page = 100 max (`config.maxAds`, enforced inside `launch.js`); 3rd-party/whitelist/secondary pages = 50 max (`config.thirdPartyMaxAds`, enforced inside `scrapePages.js`). Stored ads deeper than that keep their previous rank. Confirm counts with the user before scraping.
+- **Rescrape everything:** `node scripts/rescrape_all.js [--dry-run] [--only=] [--skip=] [--from=]`. Pages without a GetHook link are flagged `pages.skip_rescrape` (+ `skip_reason`) and skipped until a link is added.
+
+## Project log (keep it updated, every session)
+
+Running log page: https://claude.ai/artifact/15zkVRgTp8cNdpLDXcqhDt (source `docs/project-log.html`, data in its artifact database via the `ArtifactData` tool).
+- **Main log = one per date:** collection `days`, doc id `YYYY-MM-DD`, fields `{title, summary}`. On the first piece of work on a new date, create that day's doc; same date = update the existing one (read it first, pin `if_version`).
+- **Small logs = entries:** collection `entries`, doc id `YYYY-MM-DD-NN`, fields `{date, seq, kind, title, detail}`; `kind` is one of `decision | change | scrape | fix | analysis | note`. Backticks in text render as code.
+- Add entries as work lands (decisions made, code/schema changes, scrapes run with counts, fixes, analyses published), not just at the end. Don't republish the page to add entries.
+
 ## Rules
 
 - Always store the brand URL when upserting a brand
@@ -132,3 +150,13 @@ The two rules most often botched: **Angle is AD-specific, Unique mechanism is BR
 - Ads that fail backend transcription are skipped, not errored
 - The normal scraper and fix scraper are completely independent — never modify one to do the other's job
 - Fix scraper only UPDATEs existing rows, never INSERTs or DELETEs (unless a specific fix mode explicitly needs it, e.g. `--fix delete-duplicates`)
+
+## Research docs
+
+Standalone research deliverables (voice-of-customer, consumer/VoC dossiers, Reddit pulls, etc.) live in `research-docs/`. These are self-contained `.txt`/`.md` files meant to be re-uploaded into Claude as context for persona/angle/hook work — they are NOT part of the scraper or Supabase pipeline. Add new research artifacts here rather than scattering them in the project root.
+
+**Reddit MCP removed from this project (2026-11-13).** The Reddit MCP (`Claude Skills/reddit-mcp`, user-scoped) was de-registered from this project and its `mcp__reddit__*` permissions stripped from `.claude/settings.local.json`. Why: Reddit tightened its API lockdown and now blocks *all* unauthenticated programmatic access — the MCP relied on unauthenticated `.json`/`.rss` fetches, which started returning 403 (search) / 429 (feeds) across every IP we tried (home, two VPNs, phone hotspot), and server-side proxies (Jina) + public redlib mirrors are all blocked too. Reddit's own block page says "log in to your Reddit account or use your developer token" — i.e. auth is now mandatory. The sanctioned fix is an OAuth dev-token (create a `script` app at reddit.com/prefs/apps → client ID + secret → `client_credentials` grant against `oauth.reddit.com`); app creation itself kept failing because reCAPTCHA rejects VPN/hotspot IPs (needs a clean residential IP). **Decision:** rather than re-plumb this (valuable, GetHook-focused) project around Reddit auth, Reddit VoC research moves to a **separate dedicated project**. The `reddit-mcp` source repo is left intact for reuse there. The existing `research-docs/*reddit*` dossiers below were built before this lockdown and remain valid as re-uploadable context.
+
+- `research-docs/male-50plus-reddit.txt` — verbatim Reddit voice-of-customer for the male 50+ / snow-belt ICP (winter ice-traction + barefoot-grip footwear): mindmap + themed verbatim quotes + ready-made hooks. Built via the Reddit MCP, 2026-11-05.
+- `research-docs/winter-benched-barefooter-voc.txt` — verbatim Reddit VoC for the "Winter-Benched Barefooter" ICP (US women ~25–50 who love barefoot shoes but hit a wall every winter): winter-problem, competitor experiences (Saguaro/Xero Alpine/Vivo/Hike/cheap dropship), objections, + PATTERNS/SURPRISES. ~55 quotes, r/barefootshoestalk et al. Built via the Reddit MCP, 2026-11-10.
+- `research-docs/dog-fence-america-voc.txt` — verbatim Reddit research on dog fences / GPS & invisible-fence collars (USA): 5 personas, pain points, desires, brand map (SpotOn/Halo/Dogtra Pathfinder 2/Tractive/wired PetSafe/DogWatch), + surprises/landmines. 40 quotes from 13 fully-read threads. Collected via the Reddit MCP 2026-10-29, reconstructed from the session transcript 2026-11-12.

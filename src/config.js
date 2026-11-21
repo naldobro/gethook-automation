@@ -10,7 +10,10 @@
  */
 
 module.exports = {
+  // Main brand page: max list depth (how far down GetHook's list to look).
   maxAds: 100,
+  // 3rd-party / whitelist / secondary pages: hard cap on list depth.
+  thirdPartyMaxAds: 50,
 
   filters: {
     // Empty = no constraint on that dimension (see src/scraper/filters.js).

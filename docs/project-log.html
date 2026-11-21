@@ -1,0 +1,136 @@
+<title>GetHook Project Log</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Space+Grotesk:wght@500;600&display=swap">
+<style>
+/* Layout: one narrow reading column; each date is a main log, its entries a timeline beneath it. */
+:root {
+  --bg: #f6f7f9; --surface: #ffffff; --fg: #1b1f27; --muted: #5d6676; --line: #dfe3ea;
+  --accent: #2f5bd3; --accent-soft: #e6ecfb;
+  --k-decision: #7a3fc4; --k-change: #2f5bd3; --k-scrape: #1d8a5b; --k-fix: #b5631a; --k-analysis: #b2346b; --k-note: #5d6676;
+  --font-display: "Space Grotesk", "Helvetica Neue", Arial, sans-serif;
+  --font-body: "IBM Plex Sans", -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #12151b; --surface: #1a1e26; --fg: #e6e9ef; --muted: #98a2b3; --line: #2a303b;
+  --accent: #7d9cf0; --accent-soft: #1f2a44;
+  --k-decision: #b78cf0; --k-change: #7d9cf0; --k-scrape: #5ccb96; --k-fix: #e9a15c; --k-analysis: #ec7aa8; --k-note: #98a2b3;
+  color-scheme: dark } }
+:root[data-theme="dark"] {
+  --bg: #12151b; --surface: #1a1e26; --fg: #e6e9ef; --muted: #98a2b3; --line: #2a303b;
+  --accent: #7d9cf0; --accent-soft: #1f2a44;
+  --k-decision: #b78cf0; --k-change: #7d9cf0; --k-scrape: #5ccb96; --k-fix: #e9a15c; --k-analysis: #ec7aa8; --k-note: #98a2b3;
+  color-scheme: dark }
+body { background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 40px 64px; }
+.wrap { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 32px; }
+header { display: flex; flex-direction: column; gap: 6px; }
+h1 { font-family: var(--font-display); font-size: 30px; font-weight: 600; margin: 0; letter-spacing: -0.01em; text-wrap: balance; }
+.sub { color: var(--muted); margin: 0; max-width: 62ch; }
+.toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.toolbar input { flex: 1 1 220px; min-width: 0; font: inherit; padding: 8px 12px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--fg); }
+.toolbar input:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.count { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.day { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.day > summary { list-style: none; cursor: pointer; padding: 18px 20px; display: flex; flex-direction: column; gap: 4px; }
+.day > summary::-webkit-details-marker { display: none; }
+.day > summary:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.day-top { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.date { font-family: var(--font-mono); font-size: 13px; color: var(--accent); background: var(--accent-soft); padding: 2px 8px; border-radius: 6px; font-variant-numeric: tabular-nums; }
+.day-title { font-family: var(--font-display); font-size: 19px; font-weight: 600; margin: 0; text-wrap: balance; }
+.day-sum { color: var(--muted); margin: 0; }
+.day-meta { font-family: var(--font-mono); font-size: 12px; color: var(--muted); }
+.entries { list-style: none; margin: 0; padding: 4px 20px 20px; display: flex; flex-direction: column; gap: 0; border-top: 1px solid var(--line); }
+.entry { display: grid; grid-template-columns: 84px 1fr; gap: 12px; padding: 14px 0; border-bottom: 1px dashed var(--line); }
+.entry:last-child { border-bottom: 0; }
+.kind { font-family: var(--font-mono); font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--kc, var(--muted)); padding-top: 3px; }
+.entry-body { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.entry-title { font-weight: 600; margin: 0; }
+.entry-detail { margin: 0; color: var(--fg); white-space: pre-wrap; overflow-wrap: anywhere; }
+.entry-detail code, .entry-title code { font-family: var(--font-mono); font-size: 0.88em; background: var(--accent-soft); padding: 0 4px; border-radius: 4px; }
+.k-decision { --kc: var(--k-decision); } .k-change { --kc: var(--k-change); } .k-scrape { --kc: var(--k-scrape); }
+.k-fix { --kc: var(--k-fix); } .k-analysis { --kc: var(--k-analysis); } .k-note { --kc: var(--k-note); }
+.state { border: 1px dashed var(--line); border-radius: 12px; padding: 28px 20px; color: var(--muted); text-align: center; }
+@media (max-width: 480px) { .entry { grid-template-columns: 1fr; gap: 4px; } h1 { font-size: 25px; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <h1>GetHook Project Log</h1>
+    <p class="sub">What changed in the GetHook ad-intelligence project, one main log per date with each change, decision, scrape and fix underneath. Newest first.</p>
+  </header>
+  <div class="toolbar">
+    <input id="q" type="search" placeholder="Search the log (e.g. numbering, HIKE, transcripts)" aria-label="Search the log">
+    <span class="count" id="count"></span>
+  </div>
+  <main id="log"><div class="state">Loading the log…</div></main>
+</div>
+
+<script>
+const $log = document.getElementById('log');
+const $q = document.getElementById('q');
+const $count = document.getElementById('count');
+let days = [], entries = [], gotDays = false, gotEntries = false, failed = false;
+
+function esc(s) { return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+function fmt(s) { return esc(s).replace(/`([^`]+)`/g, '<code>$1</code>'); }
+function niceDate(d) {
+  const t = new Date(d + 'T12:00:00');
+  return isNaN(t) ? d : t.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function render() {
+  if (failed) { $log.innerHTML = '<div class="state">The log could not be loaded. Sign in to claude.ai and reload.</div>'; return; }
+  if (!gotDays || !gotEntries) return;
+  const q = $q.value.trim().toLowerCase();
+  const byDate = new Map();
+  for (const d of days) byDate.set(d.date, { ...d, items: [] });
+  for (const e of entries) {
+    if (!byDate.has(e.date)) byDate.set(e.date, { date: e.date, title: 'Session log', items: [] });
+    byDate.get(e.date).items.push(e);
+  }
+  let list = [...byDate.values()].sort((a, b) => b.date.localeCompare(a.date));
+  for (const d of list) d.items.sort((a, b) => (a.seq ?? 0) - (b.seq ?? 0));
+  if (q) {
+    list = list.map(d => {
+      const dayHit = [d.title, d.summary, d.date].join(' ').toLowerCase().includes(q);
+      const items = dayHit ? d.items : d.items.filter(e => [e.kind, e.title, e.detail].join(' ').toLowerCase().includes(q));
+      return { ...d, items, show: dayHit || items.length };
+    }).filter(d => d.show);
+  }
+  const n = list.reduce((s, d) => s + d.items.length, 0);
+  $count.textContent = `${list.length} day${list.length === 1 ? '' : 's'} · ${n} entr${n === 1 ? 'y' : 'ies'}`;
+  if (!list.length) {
+    $log.innerHTML = q ? '<div class="state">Nothing in the log matches that search.</div>'
+      : '<div class="state">No log entries yet. Claude adds a main log for each working date, with every change filed under it.</div>';
+    return;
+  }
+  $log.innerHTML = '<div style="display:flex;flex-direction:column;gap:16px">' + list.map((d, i) => `
+    <details class="day" ${i === 0 || q ? 'open' : ''}>
+      <summary>
+        <div class="day-top"><span class="date">${esc(niceDate(d.date))}</span><h2 class="day-title">${fmt(d.title || 'Session log')}</h2></div>
+        ${d.summary ? `<p class="day-sum">${fmt(d.summary)}</p>` : ''}
+        <span class="day-meta">${d.items.length} entr${d.items.length === 1 ? 'y' : 'ies'}</span>
+      </summary>
+      <ul class="entries">${d.items.map(e => `
+        <li class="entry k-${esc((e.kind || 'note').toLowerCase())}">
+          <span class="kind">${esc(e.kind || 'note')}</span>
+          <div class="entry-body"><p class="entry-title">${fmt(e.title)}</p>${e.detail ? `<p class="entry-detail">${fmt(e.detail)}</p>` : ''}</div>
+        </li>`).join('')}
+      </ul>
+    </details>`).join('') + '</div>';
+}
+
+$q.addEventListener('input', render);
+
+(async () => {
+  const timer = setTimeout(() => { if (!gotDays || !gotEntries) { failed = true; render(); } }, 10000);
+  const db = await window.claude?.use?.('db');
+  if (!db) { clearTimeout(timer); failed = true; render(); return; }
+  const done = () => { if (gotDays && gotEntries) clearTimeout(timer); render(); };
+  const fail = () => { clearTimeout(timer); failed = true; render(); };
+  db.collection('days').onSnapshot(s => { days = s.docs.map(x => ({ date: x.id, ...x.data() })); gotDays = true; done(); }, fail);
+  db.collection('entries').onSnapshot(s => { entries = s.docs.map(x => ({ id: x.id, ...x.data() })); gotEntries = true; done(); }, fail);
+})();
+</script>

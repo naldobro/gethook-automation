@@ -86,6 +86,10 @@ const inspectMode = flags.has('--inspect');
 // required/used for storage, export, and Supabase; the URL only changes HOW
 // we reach the brand page, not what it's filed under.
 const brandUrl = getFlagValue(flags, '--url');
+// Optional list depth (how far down GetHook's list to rank/collect); capped at
+// config.maxAds (100) — the user-set max for a brand's main page.
+const maxAdsFlag = Number(getFlagValue(flags, '--max-ads')) || null;
+const effectiveMaxAds = Math.min(maxAdsFlag || maxAds, maxAds);
 
 // Module-level so the SIGINT handler can reach it for a graceful shutdown.
 let context;
@@ -137,7 +141,7 @@ async function launchBrowser() {
 
 async function main() {
   console.log('Loaded configuration:');
-  console.log(`  maxAds:   ${maxAds}`);
+  console.log(`  maxAds:   ${effectiveMaxAds}`);
   console.log(`  country:  ${filterConfig.country || '(none)'}`);
   console.log(`  language: ${filterConfig.language || '(none)'}`);
   console.log(`  format:   ${filterConfig.format}`);
@@ -184,7 +188,7 @@ async function main() {
   log('BRAND', `Filters applied — ad card visible after refresh: ${filterResult.refreshed}`);
 
   const collectionStart = Date.now();
-  const summary = await collectAdsForBrand(context, page, brandName);
+  const summary = await collectAdsForBrand(context, page, brandName, effectiveMaxAds);
   const collectionDurationMs = Date.now() - collectionStart;
 
   const exportedPath = exportAdsToJson(brandName, summary.ads);

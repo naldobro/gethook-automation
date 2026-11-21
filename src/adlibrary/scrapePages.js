@@ -37,6 +37,8 @@ const { openAdDetails, closeAdDetails } = require('../scraper/details');
 const { extractOverviewFields } = require('../scraper/overview');
 const { navigateToBrandByUrl } = require('../scraper/navigation');
 const { upsertAd, getExistingMediaIds } = require('../supabase/adsRepository');
+const { startRun, recordRun } = require('../supabase/ranksRepository');
+const { thirdPartyMaxAds: THIRD_PARTY_MAX } = require('../config');
 const { findBrands, getDiscoveredPages, getBrandLanderDomains, ensurePage } = require('./pagesRepository');
 
 const T = 15000;
@@ -231,6 +233,10 @@ async function peekLanderHost(page, card) {
  * for several brands off one GetHook page, so we only SAVE the ads whose
  * landing page points at this brand's domain and skip the rest. `maxAds` caps
  * how many of the page's ads we EXAMINE (not how many we save).
+ *
+ * Rank history: every ad's position in this page's list is recorded as a
+ * scrape run (ranksRepository), including ads already stored (`seenIds`,
+ * pre-seeded from the DB) — those are ranked but not re-processed.
  */
 async function collectPageAds(context, page, brandId, pageId, seenIds, maxAds, allowedDomains) {
   const cards = page.getByTestId('ad-card');
@@ -241,7 +247,16 @@ async function collectPageAds(context, page, brandId, pageId, seenIds, maxAds, a
   // A host is on-brand if its registrable domain matches one of the brand's —
   // so subdomains (quiz.smooche.com) pass while foreign domains don't.
   const hostAllowed = (host) => allowedDomains.has(registrableDomain(host));
-  let saved = 0, filtered = 0, errors = 0, backendFailures = 0, examined = 0;
+  let saved = 0, filtered = 0, errors = 0, backendFailures = 0, examined = 0, alreadyStored = 0;
+  const pageSeen = new Set();
+  const listOrder = [];
+  let reachedEnd = false;
+  let runId = null;
+  try {
+    runId = await startRun({ brandId, pageId, source: 'scrapePages', listUrl: page.url(), depth: maxAds });
+  } catch (err) {
+    warn('LAYERB', `  could not start a rank-history run; ranks won't be recorded: ${err.message}`);
+  }
 
   for (let round = 0; round < MAX_SCROLL_ROUNDS && examined < maxAds; round++) {
     const count = await cards.count().catch(() => 0);
@@ -250,9 +265,16 @@ async function collectPageAds(context, page, brandId, pageId, seenIds, maxAds, a
     for (let i = 0; i < count && examined < maxAds; i++) {
       const card = cards.nth(i);
       const mediaId = await extractMediaId(card);
-      if (!mediaId || seenIds.has(mediaId)) continue;
-      seenIds.add(mediaId);
+      if (!mediaId || pageSeen.has(mediaId)) continue;
+      pageSeen.add(mediaId);
+      listOrder.push(mediaId);
       newThisRound++; examined++;
+      if (seenIds.has(mediaId)) {
+        alreadyStored++;
+        log('LAYERB', `  rank ${listOrder.length}: mediaId=${mediaId} already stored — ranked, not re-processed.`);
+        continue;
+      }
+      seenIds.add(mediaId);
 
       const summary = await extractCardSummary(card);
       log('LAYERB', `  ad ${examined}/${maxAds}: mediaId=${mediaId} "${summary.title}"`);
@@ -289,9 +311,20 @@ async function collectPageAds(context, page, brandId, pageId, seenIds, maxAds, a
 
     if (examined >= maxAds) break;
     const grew = await scrollForMore(page);
-    if (!grew && newThisRound === 0) { log('LAYERB', '  reached end of this page\'s ads.'); break; }
+    if (!grew && newThisRound === 0) { log('LAYERB', '  reached end of this page\'s ads.'); reachedEnd = true; break; }
   }
-  return { saved, filtered, errors, backendFailures };
+
+  let rank = null;
+  if (runId !== null) {
+    try {
+      rank = await recordRun(runId, { brandId, pageId, orderedMediaIds: listOrder, reachedEnd });
+      log('LAYERB', `  rank history: ${rank.ranked} ranked of ${rank.listed} listed (letter "${rank.letter}")` +
+        (reachedEnd ? `, ${rank.dropped} marked dropped.` : ' (partial list — nothing marked dropped).'));
+    } catch (err) {
+      warn('LAYERB', `  could not record rank history: ${err.message}`);
+    }
+  }
+  return { saved, filtered, errors, backendFailures, alreadyStored, reachedEnd, rank };
 }
 
 let context;
@@ -341,6 +374,7 @@ async function runDirectPageScrape(brand, { pageName, url, type, maxAds, inspect
   console.log(`Brand: ${brand.name} (id=${brand.id})`);
   console.log(`Page:  ${pageName} (page_id=${pageId}, type=${type})`);
   console.log(`URL:   ${url}`);
+  console.log(`Already stored (ranked only): ${r.alreadyStored}   Reached end of list: ${r.reachedEnd}`);
   console.log(`Saved: ${r.saved}   Errors: ${r.errors}   Backend-fail (GetHook couldn't transcribe): ${r.backendFailures}`);
 
   if (inspect) await askQuestion('\n--inspect: browser open. Press Enter to close...\n');
@@ -351,7 +385,8 @@ async function runDirectPageScrape(brand, { pageName, url, type, maxAds, inspect
 async function main() {
   const { flags, positional, opts } = parseArgs(process.argv.slice(2));
   const brandQuery = positional[0];
-  const maxAds = Number(opts['max-ads'] || 25);
+  // 3rd-party pages are capped at config.thirdPartyMaxAds (50) list depth.
+  const maxAds = Math.min(Number(opts['max-ads'] || THIRD_PARTY_MAX), THIRD_PARTY_MAX);
   const onlyPage = opts.page || null;
   // Comma-separated page names to exclude (e.g. Ad Library false positives that
   // matched the domain search but aren't this brand). Matched the same way as
